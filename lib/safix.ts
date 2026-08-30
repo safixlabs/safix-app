@@ -5,6 +5,8 @@ const address = (value: string | undefined): Address | undefined =>
 
 export const poolAddress = address(process.env.NEXT_PUBLIC_POOL_ADDRESS)
 export const usdcAddress = address(process.env.NEXT_PUBLIC_USDC_ADDRESS)
+export const registryAddress = address(process.env.NEXT_PUBLIC_REGISTRY_ADDRESS)
+export const deskAddress = address(process.env.NEXT_PUBLIC_DESK_ADDRESS)
 
 export const liveAssets = [
   { symbol: "tBILL", name: "Tokenized treasury 3M", kind: "Government debt", address: address(process.env.NEXT_PUBLIC_ASSET_TBILL) },
@@ -38,6 +40,20 @@ export const safixPoolAbi = [
   { type: "function", name: "assetConfig", stateMutability: "view", inputs: [{ name: "asset", type: "address" }], outputs: [{ name: "enabled", type: "bool" }, { name: "maxLtvBps", type: "uint16" }, { name: "liqThresholdBps", type: "uint16" }, { name: "priceUsd1e18", type: "uint256" }] },
   { type: "function", name: "collateralValueUsdc", stateMutability: "view", inputs: [{ name: "asset", type: "address" }, { name: "amount", type: "uint256" }], outputs: [{ type: "uint256" }] },
   { type: "function", name: "isLiquidatable", stateMutability: "view", inputs: [{ name: "borrower", type: "address" }, { name: "asset", type: "address" }], outputs: [{ type: "bool" }] }
+] as const
+
+export const registryAbi = [
+  { type: "function", name: "checkMaskOf", stateMutability: "view", inputs: [{ name: "subject", type: "address" }], outputs: [{ name: "checkMask", type: "uint8" }, { name: "expiry", type: "uint64" }] },
+  { type: "function", name: "isEligible", stateMutability: "view", inputs: [{ name: "subject", type: "address" }], outputs: [{ type: "bool" }] }
+] as const
+
+export const deskAbi = [
+  { type: "function", name: "partnershipCount", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "partnerships", stateMutability: "view", inputs: [{ name: "id", type: "uint256" }], outputs: [{ name: "operator", type: "address" }, { name: "operatorShareBps", type: "uint16" }, { name: "fundingDeadline", type: "uint64" }, { name: "status", type: "uint8" }, { name: "fundingGoal", type: "uint256" }, { name: "funded", type: "uint256" }, { name: "returned", type: "uint256" }, { name: "operatorPaid", type: "bool" }] },
+  { type: "function", name: "fund", stateMutability: "nonpayable", inputs: [{ name: "id", type: "uint256" }, { name: "amount", type: "uint256" }], outputs: [] },
+  { type: "function", name: "claim", stateMutability: "nonpayable", inputs: [{ name: "id", type: "uint256" }], outputs: [] },
+  { type: "function", name: "funderPayoutOf", stateMutability: "view", inputs: [{ name: "id", type: "uint256" }, { name: "funder", type: "address" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "contributions", stateMutability: "view", inputs: [{ name: "id", type: "uint256" }, { name: "funder", type: "address" }], outputs: [{ type: "uint256" }] }
 ] as const
 
 export const erc20Abi = [

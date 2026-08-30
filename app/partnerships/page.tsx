@@ -1,0 +1,291 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { useAccount, usePublicClient, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
+import { Field, PageHeader, Panel, PrimaryButton } from "@/components/ui"
+import { usd } from "@/lib/demo"
+import { deskAbi, deskAddress, erc20Abi, fromUsdcUnits, usdcAddress, usdcUnits } from "@/lib/safix"
+
+const statusLabels = ["Funding", "Active", "Settled", "Cancelled"] as const
+
+type PartnershipRow = {
+  id: number
+  operator: string
+  shareBps: number
+  deadline: number
+  status: number
+  goal: number
+  funded: number
+  returned: number
+  payout: number
+  contribution: number
+}
+
+const shortAddress = (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}`
+
+function StatusPill({ status }: { status: number }) {
+  const label = statusLabels[status] ?? "Unknown"
+  return (
+    <span
+      className={`rounded-full border px-3 py-1 text-[12px] tracking-[-0.01em] ${
+        status === 1
+          ? "border-mint text-mint"
+          : status === 2
+            ? "border-line text-fog"
+            : "border-line text-haze"
+      }`}
+    >
+      {label}
+    </span>
+  )
+}
+
+function LivePartnerships() {
+  const { address } = useAccount()
+  const client = usePublicClient()
+  const [rows, setRows] = useState<PartnershipRow[]>([])
+  const [loaded, setLoaded] = useState(false)
+  const [amounts, setAmounts] = useState<Record<number, string>>({})
+
+  const { writeContract, data: txHash, isPending, error } = useWriteContract()
+  const receipt = useWaitForTransactionReceipt({ hash: txHash })
+  const busy = isPending || (Boolean(txHash) && receipt.isLoading)
+
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      const desk = deskAddress
+      if (!client || !desk) return
+      const count = Number(
+        await client.readContract({ abi: deskAbi, address: desk, functionName: "partnershipCount" })
+      )
+      const ids = Array.from({ length: count }, (_, id) => id)
+      const reads = await Promise.all(
+        ids.map(id =>
+          client.readContract({ abi: deskAbi, address: desk, functionName: "partnerships", args: [BigInt(id)] })
+        )
+      )
+      const payouts = address
+        ? await Promise.all(
+            ids.map(id =>
+              client.readContract({
+                abi: deskAbi,
+                address: desk,
+                functionName: "funderPayoutOf",
+                args: [BigInt(id), address]
+              })
+            )
+          )
+        : ids.map(() => 0n)
+      const contributions = address
+        ? await Promise.all(
+            ids.map(id =>
+              client.readContract({
+                abi: deskAbi,
+                address: desk,
+                functionName: "contributions",
+                args: [BigInt(id), address]
+              })
+            )
+          )
+        : ids.map(() => 0n)
+      if (cancelled) return
+      setRows(
+        ids.map(id => ({
+          id,
+          operator: reads[id][0],
+          shareBps: Number(reads[id][1]),
+          deadline: Number(reads[id][2]),
+          status: Number(reads[id][3]),
+          goal: fromUsdcUnits(reads[id][4]),
+          funded: fromUsdcUnits(reads[id][5]),
+          returned: fromUsdcUnits(reads[id][6]),
+          payout: fromUsdcUnits(payouts[id]),
+          contribution: fromUsdcUnits(contributions[id])
+        }))
+      )
+      setLoaded(true)
+    }
+    load()
+    const interval = setInterval(load, 15000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [client, address, receipt.isSuccess])
+
+  const fund = async (row: PartnershipRow) => {
+    const desk = deskAddress
+    const usdc = usdcAddress
+    if (!desk || !usdc || !address || !client) return
+    const parsed = Number.parseFloat(amounts[row.id] ?? "")
+    if (!Number.isFinite(parsed) || parsed <= 0) return
+    const units = usdcUnits(parsed)
+    const allowance = await client.readContract({
+      abi: erc20Abi,
+      address: usdc,
+      functionName: "allowance",
+      args: [address, desk]
+    })
+    if (allowance < units) {
+      writeContract({ abi: erc20Abi, address: usdc, functionName: "approve", args: [desk, units] })
+    } else {
+      writeContract({ abi: deskAbi, address: desk, functionName: "fund", args: [BigInt(row.id), units] })
+    }
+  }
+
+  const claim = (row: PartnershipRow) => {
+    if (!deskAddress) return
+    writeContract({ abi: deskAbi, address: deskAddress, functionName: "claim", args: [BigInt(row.id)] })
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {rows.length === 0 ? (
+        <Panel title="Open partnerships">
+          <p className="py-2 text-[14px] tracking-[-0.01em] text-haze">
+            {loaded ? "No partnerships created yet." : "Loading partnerships…"}
+          </p>
+        </Panel>
+      ) : (
+        rows.map(row => (
+          <Panel key={row.id} title={`Partnership #${row.id}`}>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <StatusPill status={row.status} />
+                  <span className="text-[13px] tracking-[-0.01em] text-haze">
+                    Operator {shortAddress(row.operator)} · keeps {(row.shareBps / 100).toFixed(0)}% of profit
+                  </span>
+                </div>
+                <span className="text-[13px] tracking-[-0.01em] text-haze">
+                  Returned {usd(row.returned, 0)}
+                </span>
+              </div>
+
+              <div>
+                <div className="flex items-baseline justify-between text-[13px] tracking-[-0.01em]">
+                  <span className="text-haze">Funded</span>
+                  <span className="text-mist [font-variant-numeric:tabular-nums]">
+                    {usd(row.funded, 0)} / {usd(row.goal, 0)}
+                  </span>
+                </div>
+                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-line">
+                  <div
+                    className="h-full rounded-full bg-mint"
+                    style={{ width: `${Math.min(100, (row.funded / row.goal) * 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              {row.status === 0 ? (
+                <div className="flex gap-2.5">
+                  <Field
+                    inputMode="decimal"
+                    placeholder="USDC amount"
+                    value={amounts[row.id] ?? ""}
+                    onChange={event => setAmounts(current => ({ ...current, [row.id]: event.target.value }))}
+                  />
+                  <PrimaryButton disabled={busy || !address} onClick={() => fund(row)}>
+                    Fund
+                  </PrimaryButton>
+                </div>
+              ) : null}
+
+              {(row.status === 2 || row.status === 3) && row.payout > 0 ? (
+                <PrimaryButton disabled={busy || !address} onClick={() => claim(row)} className="w-fit">
+                  Claim {usd(row.payout)}
+                </PrimaryButton>
+              ) : null}
+
+              {row.contribution > 0 ? (
+                <p className="text-[12.5px] tracking-[-0.02em] text-haze">
+                  Your contribution: {usd(row.contribution)}
+                </p>
+              ) : null}
+            </div>
+          </Panel>
+        ))
+      )}
+      <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">
+        {error ? error.message.split("\n")[0] : receipt.isSuccess ? "Confirmed onchain." : ""}
+      </p>
+    </div>
+  )
+}
+
+function DemoPartnerships() {
+  const demo = [
+    {
+      id: 0,
+      operator: "0x7c41…e09b",
+      share: 40,
+      status: 1,
+      goal: 100000,
+      funded: 100000,
+      returned: 36500,
+      note: "Working capital for a tokenized invoice book. Profit split 60/40 in favor of capital."
+    },
+    {
+      id: 1,
+      operator: "0x2fa8…11cd",
+      share: 35,
+      status: 0,
+      goal: 250000,
+      funded: 84000,
+      returned: 0,
+      note: "Inventory financing against tokenized gold. Funding open."
+    }
+  ]
+
+  return (
+    <div className="flex flex-col gap-4">
+      {demo.map(row => (
+        <Panel key={row.id} title={`Partnership #${row.id}`}>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <StatusPill status={row.status} />
+                <span className="text-[13px] tracking-[-0.01em] text-haze">
+                  Operator {row.operator} · keeps {row.share}% of profit
+                </span>
+              </div>
+              <span className="text-[13px] tracking-[-0.01em] text-haze">Returned {usd(row.returned, 0)}</span>
+            </div>
+            <div>
+              <div className="flex items-baseline justify-between text-[13px] tracking-[-0.01em]">
+                <span className="text-haze">Funded</span>
+                <span className="text-mist [font-variant-numeric:tabular-nums]">
+                  {usd(row.funded, 0)} / {usd(row.goal, 0)}
+                </span>
+              </div>
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-line">
+                <div
+                  className="h-full rounded-full bg-mint"
+                  style={{ width: `${Math.min(100, (row.funded / row.goal) * 100)}%` }}
+                />
+              </div>
+            </div>
+            <p className="text-[13.5px] leading-[1.6] tracking-[-0.01em] text-mist">{row.note}</p>
+          </div>
+        </Panel>
+      ))}
+      <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">
+        Demo mode: no partnership desk contract configured yet.
+      </p>
+    </div>
+  )
+}
+
+export default function PartnershipsPage() {
+  return (
+    <div className="flex flex-col gap-8">
+      <PageHeader
+        title="Partnerships"
+        lead="For financing tied to a business, the pool acts as a partner instead of a creditor. Profit splits at a pre-agreed ratio; genuine losses fall on the capital."
+        badge={deskAddress ? "Live onchain" : "Demo data"}
+      />
+      {deskAddress ? <LivePartnerships /> : <DemoPartnerships />}
+    </div>
+  )
+}

@@ -31,4 +31,19 @@ export const robinhoodTestnet = defineChain({
   }
 })
 
-export const activeChain = process.env.NEXT_PUBLIC_CHAIN === "mainnet" ? robinhood : robinhoodTestnet
+export const localChain = defineChain({
+  id: 31337,
+  name: "Local Anvil",
+  testnet: true,
+  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: {
+    default: { http: ["http://127.0.0.1:8545"] }
+  }
+})
+
+export const activeChain =
+  process.env.NEXT_PUBLIC_CHAIN === "mainnet"
+    ? robinhood
+    : process.env.NEXT_PUBLIC_CHAIN === "local"
+      ? localChain
+      : robinhoodTestnet

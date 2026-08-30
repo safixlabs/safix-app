@@ -179,6 +179,7 @@ export default function DashboardPage() {
       <PageHeader
         title="Overview"
         lead="Your collateral, your credit, and your passport in one place. Debt never grows with time here: what you drew is what you owe."
+        badge={isLive ? "Live onchain" : "Demo data"}
       />
       {isLive ? <LiveDashboard /> : <DemoDashboard />}
       <p className="text-[13px] leading-[1.6] tracking-[-0.02em] text-haze">

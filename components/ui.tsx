@@ -1,22 +1,22 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react"
 
-export function DemoTag() {
+export function DemoTag({ label = "Demo data" }: { label?: string }) {
   return (
     <span className="inline-flex items-center gap-2 rounded-full border border-line bg-panel/80 px-3.5 py-1.5 text-[12px] tracking-[-0.02em] text-haze">
       <span className="h-1.5 w-1.5 rounded-full bg-mint" />
-      Demo data
+      {label}
     </span>
   )
 }
 
-export function PageHeader({ title, lead }: { title: string; lead: string }) {
+export function PageHeader({ title, lead, badge }: { title: string; lead: string; badge?: string }) {
   return (
     <header className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-[30px] font-bold leading-[1.1] tracking-[-0.02em] text-fog md:text-[36px]">
           {title}
         </h1>
-        <DemoTag />
+        <DemoTag label={badge} />
       </div>
       <p className="max-w-[560px] text-[14px] leading-[1.6] tracking-[-0.02em] text-mist md:text-[15px]">
         {lead}

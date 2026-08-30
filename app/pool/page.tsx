@@ -96,6 +96,11 @@ function LivePool() {
     })
   }
 
+  const mintTestUsdc = () => {
+    if (!usdcAddress || !address) return
+    writeContract({ abi: erc20Abi, address: usdcAddress, functionName: "mint", args: [address, 10_000n * 10n ** 6n] })
+  }
+
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -160,6 +165,13 @@ function LivePool() {
               className="rounded-full border border-line px-5 py-2.5 text-[13px] font-medium tracking-[-0.01em] text-mist transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
             >
               Claim liquidation gains
+            </button>
+            <button
+              onClick={mintTestUsdc}
+              disabled={busy || !address}
+              className="rounded-full border border-line px-5 py-2 text-[12.5px] font-medium tracking-[-0.01em] text-haze transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
+            >
+              Mint 10,000 test USDC
             </button>
             <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">
               {error
@@ -277,6 +289,7 @@ export default function PoolPage() {
       <PageHeader
         title="Stability pool"
         lead="The pool funds every draw and absorbs every liquidation. Providers earn from real events, liquidation gains and protocol rewards, never from time."
+        badge={isLive ? "Live onchain" : "Demo data"}
       />
       {isLive ? <LivePool /> : <DemoPool />}
     </div>

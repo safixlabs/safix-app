@@ -66,6 +66,11 @@ function LiveBorrow() {
     address: poolAddress,
     functionName: "originationFeeBps"
   })
+  const redeemBps = useReadContract({
+    abi: safixPoolAbi,
+    address: poolAddress,
+    functionName: "redemptionFeeBps"
+  })
 
   const { writeContract, data: txHash, isPending, error } = useWriteContract()
   const receipt = useWaitForTransactionReceipt({ hash: txHash })
@@ -86,6 +91,10 @@ function LiveBorrow() {
   const maxLtvBps = config.data?.[1] ?? 0
   const collateral = position.data?.[0] ?? 0n
   const debt = position.data?.[1] ?? 0n
+  const totalDrawn = position.data?.[2] ?? 0n
+  const closeOwed = debt + (totalDrawn * BigInt(redeemBps.data ?? 30)) / 10_000n
+  const hasPosition = collateral > 0n || debt > 0n
+  const needsCloseApproval = closeOwed > 0n && (usdcAllowance.data ?? 0n) < closeOwed
 
   const lockedValueUsdc = (collateral * price1e18) / 10n ** 30n
   const capacity = (lockedValueUsdc * BigInt(maxLtvBps)) / 10_000n
@@ -136,6 +145,20 @@ function LiveBorrow() {
     }
   }
 
+  const closeOut = () => {
+    if (!asset || !poolAddress || !usdcAddress || !hasPosition) return
+    if (needsCloseApproval) {
+      writeContract({ abi: erc20Abi, address: usdcAddress, functionName: "approve", args: [poolAddress, closeOwed] })
+    } else {
+      writeContract({ abi: safixPoolAbi, address: poolAddress, functionName: "closePosition", args: [asset.address] })
+    }
+  }
+
+  const mintTestAsset = () => {
+    if (!asset || !address) return
+    writeContract({ abi: erc20Abi, address: asset.address, functionName: "mint", args: [address, 10n * 10n ** 18n] })
+  }
+
   return (
     <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
       <Panel title="Collateral">
@@ -179,6 +202,16 @@ function LiveBorrow() {
           <PrimaryButton disabled={lockUnits === 0n || busy || !address} onClick={lock} className="w-full">
             {busy ? "Confirming…" : needsLockApproval ? `Approve ${asset?.symbol}` : "Lock collateral"}
           </PrimaryButton>
+          <button
+            onClick={mintTestAsset}
+            disabled={busy || !address}
+            className="rounded-full border border-line px-5 py-2 text-[12.5px] font-medium tracking-[-0.01em] text-haze transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
+          >
+            Mint 10 test {asset?.symbol}
+          </button>
+          <p className="text-center text-[12px] tracking-[-0.02em] text-haze">
+            Wallet balance: {(Number(tokenBalance.data ?? 0n) / 1e18).toFixed(4)} {asset?.symbol}
+          </p>
         </div>
       </Panel>
 
@@ -238,6 +271,17 @@ function LiveBorrow() {
                 {needsRepayApproval ? "Approve" : "Repay"}
               </button>
             </div>
+            {hasPosition ? (
+              <button
+                onClick={closeOut}
+                disabled={busy || !address}
+                className="rounded-full border border-line px-5 py-2 text-[12.5px] font-medium tracking-[-0.01em] text-haze transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
+              >
+                {needsCloseApproval
+                  ? `Approve ${usd(fromUsdcUnits(closeOwed))} to close`
+                  : `Close position, pay ${usd(fromUsdcUnits(closeOwed))}, unlock all collateral`}
+              </button>
+            ) : null}
           </div>
 
           <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">
@@ -389,6 +433,7 @@ export default function BorrowPage() {
       <PageHeader
         title="Borrow"
         lead="Lock a tokenized asset, draw USDC, pay one fee at the door. The debt you see at draw is the debt you repay."
+        badge={isLive && liveAssets.length > 0 ? "Live onchain" : "Demo data"}
       />
       {isLive && liveAssets.length > 0 ? <LiveBorrow /> : <DemoBorrow />}
     </div>
