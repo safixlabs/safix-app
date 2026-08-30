@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --color-carbon: #070c0c;
+  --color-panel: #0d1615;
+  --color-teal-deep: #02252b;
+  --color-mint: #10e7c0;
+  --color-mint-bright: #6bf2da;
+  --color-fog: #e9f2ee;
+  --color-mist: #c0cdc8;
+  --color-haze: #8ea09a;
+  --color-line: #1d2b28;
+}
+
+@theme inline {
+  --font-sans: var(--font-sans-src), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-carbon font-sans text-fog antialiased;
+  }
+
+  ::selection {
+    @apply bg-mint/25;
+  }
+}
