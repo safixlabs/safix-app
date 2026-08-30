@@ -2,12 +2,58 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState } from "react"
+import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi"
+import { activeChain } from "@/lib/chain"
 import { appLinks, normalizePath } from "./nav"
+
+const shortAddress = (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}`
+
+function WalletButton() {
+  const { address, chainId, isConnected } = useAccount()
+  const { connect, connectors, isPending } = useConnect()
+  const { disconnect } = useDisconnect()
+  const { switchChain, isPending: switching } = useSwitchChain()
+
+  const injectedConnector = connectors[0]
+  const wrongNetwork = isConnected && chainId !== activeChain.id
+
+  if (!isConnected) {
+    return (
+      <button
+        onClick={() => injectedConnector && connect({ connector: injectedConnector })}
+        disabled={!injectedConnector || isPending}
+        className="hidden shrink-0 rounded-full bg-mint px-4.5 py-2 text-[13px] font-semibold tracking-[-0.01em] text-carbon transition-colors hover:bg-mint-bright disabled:bg-line disabled:text-haze sm:block"
+      >
+        {isPending ? "Connecting…" : injectedConnector ? "Connect wallet" : "No wallet detected"}
+      </button>
+    )
+  }
+
+  if (wrongNetwork) {
+    return (
+      <button
+        onClick={() => switchChain({ chainId: activeChain.id })}
+        disabled={switching}
+        className="hidden shrink-0 rounded-full bg-mint px-4.5 py-2 text-[13px] font-semibold tracking-[-0.01em] text-carbon transition-colors hover:bg-mint-bright sm:block"
+      >
+        {switching ? "Switching…" : `Switch to ${activeChain.name}`}
+      </button>
+    )
+  }
+
+  return (
+    <button
+      onClick={() => disconnect()}
+      title="Disconnect"
+      className="hidden shrink-0 rounded-full border border-line px-4.5 py-2 text-[13px] font-medium tracking-[-0.01em] text-mist transition-colors hover:border-mint hover:text-mint sm:block"
+    >
+      {address ? shortAddress(address) : "Connected"}
+    </button>
+  )
+}
 
 export default function TopNav() {
   const pathname = normalizePath(usePathname())
-  const [connected, setConnected] = useState(false)
 
   return (
     <div className="sticky top-0 z-20 border-b border-line bg-carbon/80 backdrop-blur-md">
@@ -16,7 +62,7 @@ export default function TopNav() {
           <Link href="/" className="text-[19px] font-bold tracking-[-0.01em] text-fog">
             Safix<span className="text-mint">.</span>
           </Link>
-          <span className="text-[11px] tracking-[-0.02em] text-haze">App</span>
+          <span className="text-[11px] tracking-[-0.02em] text-haze">{activeChain.name}</span>
         </div>
         <nav className="flex items-center gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {appLinks.map(link => {
@@ -34,16 +80,7 @@ export default function TopNav() {
             )
           })}
         </nav>
-        <button
-          onClick={() => setConnected(current => !current)}
-          className={`hidden shrink-0 rounded-full px-4.5 py-2 text-[13px] font-semibold tracking-[-0.01em] transition-colors sm:block ${
-            connected
-              ? "border border-line text-mist hover:border-mint hover:text-mint"
-              : "bg-mint text-carbon hover:bg-mint-bright"
-          }`}
-        >
-          {connected ? "0xA3f1…9c2e" : "Connect wallet"}
-        </button>
+        <WalletButton />
       </div>
     </div>
   )

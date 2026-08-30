@@ -2,7 +2,11 @@
 
 The Safix application: borrow USDC against tokenized assets at zero interest, provide liquidity to the stability pool, and manage the private credit passport.
 
-Currently a UI-first build with demo data. No wallet, chain, or backend is wired yet; every screen renders the intended product with local mock state.
+Built for Robinhood Chain (Arbitrum Orbit, mainnet chain id 4663, testnet 46630) with wagmi and viem. Wallet connection, network switching, and the SafixPool contract calls are wired; screens fall back to demo data until contract addresses are configured. The protocol contracts live in [safixlabs/safix](https://github.com/safixlabs/safix) under `contracts/`.
+
+## Going live
+
+Deploy the contracts to Robinhood Chain Testnet, then copy `.env.example` to `.env.local` and fill in the deployed addresses. With `NEXT_PUBLIC_POOL_ADDRESS` and `NEXT_PUBLIC_USDC_ADDRESS` set, the pool, borrow, and dashboard screens switch from demo data to live onchain reads and writes (approve, deposit, withdraw, lock, draw, repay, claim).
 
 - Protocol overview: [safixlabs/safix](https://github.com/safixlabs/safix)
 - Documentation: [safix-docs.vercel.app](https://safix-docs.vercel.app)

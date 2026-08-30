@@ -4,6 +4,7 @@ import { DM_Sans } from "next/font/google"
 import "./globals.css"
 import Backdrop from "@/components/Backdrop"
 import TopNav from "@/components/TopNav"
+import Providers from "./providers"
 
 const sans = DM_Sans({
   subsets: ["latin"],
@@ -24,8 +25,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className={sans.variable}>
       <body>
         <Backdrop />
-        <TopNav />
-        <main className="mx-auto w-full max-w-[1120px] px-6 pb-24 pt-10 md:pt-14">{children}</main>
+        <Providers>
+          <TopNav />
+          <main className="mx-auto w-full max-w-[1120px] px-6 pb-24 pt-10 md:pt-14">{children}</main>
+        </Providers>
         <footer className="mx-auto flex w-full max-w-[1120px] items-baseline justify-between border-t border-line px-6 pb-8 pt-6 text-[12px] tracking-[-0.02em] text-haze">
           <span>Safix</span>
           <a href="https://safix-docs.vercel.app" className="transition-colors hover:text-mint">
