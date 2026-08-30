@@ -1,4 +1,20 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react"
+import { explorerTxUrl } from "@/lib/chain"
+
+export function ConfirmedLink({ hash }: { hash?: `0x${string}` }) {
+  const url = explorerTxUrl(hash)
+  if (!url) return <>Confirmed onchain.</>
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="text-mint transition-colors hover:text-mint-bright"
+    >
+      Confirmed onchain ↗
+    </a>
+  )
+}
 
 export function DemoTag({ label = "Demo data" }: { label?: string }) {
   return (

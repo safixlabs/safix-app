@@ -47,3 +47,8 @@ export const activeChain =
     : process.env.NEXT_PUBLIC_CHAIN === "local"
       ? localChain
       : robinhoodTestnet
+
+const explorers = (activeChain as { blockExplorers?: { default: { url: string } } }).blockExplorers
+
+export const explorerTxUrl = (hash?: `0x${string}`) =>
+  hash && explorers ? `${explorers.default.url}/tx/${hash}` : undefined

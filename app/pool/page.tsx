@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
-import { Field, PageHeader, Panel, PrimaryButton, Stat } from "@/components/ui"
+import { ConfirmedLink, Field, PageHeader, Panel, PrimaryButton, Stat } from "@/components/ui"
 import { poolStats, usd } from "@/lib/demo"
 import {
   erc20Abi,
@@ -177,7 +177,7 @@ function LivePool() {
               {error
                 ? error.message.split("\n")[0]
                 : receipt.isSuccess
-                  ? "Confirmed onchain."
+                  ? <ConfirmedLink hash={txHash} />
                   : "Withdraw any time outside active liquidations."}
             </p>
           </div>

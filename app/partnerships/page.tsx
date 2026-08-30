@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useAccount, usePublicClient, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
-import { Field, PageHeader, Panel, PrimaryButton } from "@/components/ui"
+import { ConfirmedLink, Field, PageHeader, Panel, PrimaryButton } from "@/components/ui"
 import { usd } from "@/lib/demo"
 import { deskAbi, deskAddress, erc20Abi, fromUsdcUnits, usdcAddress, usdcUnits } from "@/lib/safix"
 
@@ -208,7 +208,7 @@ function LivePartnerships() {
         ))
       )}
       <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">
-        {error ? error.message.split("\n")[0] : receipt.isSuccess ? "Confirmed onchain." : ""}
+        {error ? error.message.split("\n")[0] : receipt.isSuccess ? <ConfirmedLink hash={txHash} /> : ""}
       </p>
     </div>
   )

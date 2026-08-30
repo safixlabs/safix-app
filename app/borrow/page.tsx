@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
-import { Field, HealthBar, PageHeader, Panel, PrimaryButton } from "@/components/ui"
+import { ConfirmedLink, Field, HealthBar, PageHeader, Panel, PrimaryButton } from "@/components/ui"
 import { collateralAssets, originationFeeRate, usd } from "@/lib/demo"
 import {
   erc20Abi,
@@ -288,7 +288,7 @@ function LiveBorrow() {
             {error
               ? error.message.split("\n")[0]
               : receipt.isSuccess
-                ? "Confirmed onchain."
+                ? <ConfirmedLink hash={txHash} />
                 : "No time-based cost. Repay whenever you choose."}
           </p>
         </div>
