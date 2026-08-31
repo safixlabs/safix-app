@@ -6,11 +6,13 @@ import { ConfirmedLink, Field, HealthBar, PageHeader, Panel, PrimaryButton } fro
 import { collateralAssets, originationFeeRate, usd } from "@/lib/demo"
 import {
   erc20Abi,
+  erc8056Abi,
   fromUsdcUnits,
   isLive,
   liveAssets,
   poolAddress,
   safixPoolAbi,
+  uiTokenAmount,
   usdcAddress,
   usdcUnits
 } from "@/lib/safix"
@@ -70,6 +72,12 @@ function LiveBorrow() {
     abi: safixPoolAbi,
     address: poolAddress,
     functionName: "redemptionFeeBps"
+  })
+  const uiMultiplier = useReadContract({
+    abi: erc8056Abi,
+    address: asset?.address,
+    functionName: "uiMultiplier",
+    query: { enabled: Boolean(asset), retry: false }
   })
 
   const { writeContract, data: txHash, isPending, error } = useWriteContract()
@@ -190,7 +198,7 @@ function LiveBorrow() {
           <div className="flex items-baseline justify-between text-[13px] tracking-[-0.01em]">
             <span className="text-haze">Locked</span>
             <span className="text-mist [font-variant-numeric:tabular-nums]">
-              {(Number(collateral) / 1e18).toFixed(4)} {asset?.symbol} · {usd(fromUsdcUnits(lockedValueUsdc))}
+              {uiTokenAmount(collateral, uiMultiplier.data).toFixed(4)} {asset?.symbol} · {usd(fromUsdcUnits(lockedValueUsdc))}
             </span>
           </div>
           <Field
@@ -210,7 +218,7 @@ function LiveBorrow() {
             Mint 10 test {asset?.symbol}
           </button>
           <p className="text-center text-[12px] tracking-[-0.02em] text-haze">
-            Wallet balance: {(Number(tokenBalance.data ?? 0n) / 1e18).toFixed(4)} {asset?.symbol}
+            Wallet balance: {uiTokenAmount(tokenBalance.data ?? 0n, uiMultiplier.data).toFixed(4)} {asset?.symbol}
           </p>
         </div>
       </Panel>

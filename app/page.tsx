@@ -5,7 +5,7 @@ import { useEffect, useState } from "react"
 import { useAccount, usePublicClient } from "wagmi"
 import { HealthBar, PageHeader, Panel, Stat } from "@/components/ui"
 import { demoPositions, maxLtvFor, passport, usd } from "@/lib/demo"
-import { fromUsdcUnits, isLive, liveAssets, poolAddress, safixPoolAbi } from "@/lib/safix"
+import { ONE_1E18, erc8056Abi, fromUsdcUnits, isLive, liveAssets, poolAddress, safixPoolAbi, uiTokenAmount } from "@/lib/safix"
 
 type LiveRow = {
   symbol: string
@@ -57,12 +57,19 @@ function LiveDashboard() {
         functionName: "compoundedDepositOf",
         args: [address]
       })
+      const multipliers = await Promise.all(
+        liveAssets.map(asset =>
+          client
+            .readContract({ abi: erc8056Abi, address: asset.address, functionName: "uiMultiplier" })
+            .catch(() => ONE_1E18)
+        )
+      )
       if (cancelled) return
       setRows(
         liveAssets
           .map((asset, index) => ({
             symbol: asset.symbol,
-            locked: Number(positionReads[index][0]) / 1e18,
+            locked: uiTokenAmount(positionReads[index][0], multipliers[index]),
             value: fromUsdcUnits(valueReads[index]),
             debt: fromUsdcUnits(positionReads[index][1])
           }))

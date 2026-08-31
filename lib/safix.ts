@@ -42,6 +42,15 @@ export const safixPoolAbi = [
   { type: "function", name: "isLiquidatable", stateMutability: "view", inputs: [{ name: "borrower", type: "address" }, { name: "asset", type: "address" }], outputs: [{ type: "bool" }] }
 ] as const
 
+export const erc8056Abi = [
+  { type: "function", name: "uiMultiplier", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] }
+] as const
+
+export const ONE_1E18 = 10n ** 18n
+
+export const uiTokenAmount = (raw: bigint, multiplier?: bigint) =>
+  Number((raw * (multiplier ?? ONE_1E18)) / ONE_1E18) / 1e18
+
 export const registryAbi = [
   { type: "function", name: "checkMaskOf", stateMutability: "view", inputs: [{ name: "subject", type: "address" }], outputs: [{ name: "checkMask", type: "uint8" }, { name: "expiry", type: "uint64" }] },
   { type: "function", name: "isEligible", stateMutability: "view", inputs: [{ name: "subject", type: "address" }], outputs: [{ type: "bool" }] }
