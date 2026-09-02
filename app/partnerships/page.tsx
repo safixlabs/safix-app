@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react"
 import { useAccount, usePublicClient, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
-import { ConfirmedLink, Field, PageHeader, Panel, PrimaryButton } from "@/components/ui"
+import { AmountField, ConfirmedLink, PageHeader, Panel, PrimaryButton } from "@/components/ui"
 import { usd } from "@/lib/demo"
-import { deskAbi, deskAddress, erc20Abi, fromUsdcUnits, usdcAddress, usdcUnits } from "@/lib/safix"
+import { deskAbi, deskAddress, erc20Abi, fromUsdgUnits, usdgAddress, usdgUnits } from "@/lib/safix"
 
 const statusLabels = ["Funding", "Active", "Settled", "Cancelled"] as const
 
@@ -97,11 +97,11 @@ function LivePartnerships() {
           shareBps: Number(reads[id][1]),
           deadline: Number(reads[id][2]),
           status: Number(reads[id][3]),
-          goal: fromUsdcUnits(reads[id][4]),
-          funded: fromUsdcUnits(reads[id][5]),
-          returned: fromUsdcUnits(reads[id][6]),
-          payout: fromUsdcUnits(payouts[id]),
-          contribution: fromUsdcUnits(contributions[id])
+          goal: fromUsdgUnits(reads[id][4]),
+          funded: fromUsdgUnits(reads[id][5]),
+          returned: fromUsdgUnits(reads[id][6]),
+          payout: fromUsdgUnits(payouts[id]),
+          contribution: fromUsdgUnits(contributions[id])
         }))
       )
       setLoaded(true)
@@ -116,19 +116,19 @@ function LivePartnerships() {
 
   const fund = async (row: PartnershipRow) => {
     const desk = deskAddress
-    const usdc = usdcAddress
-    if (!desk || !usdc || !address || !client) return
+    const usdg = usdgAddress
+    if (!desk || !usdg || !address || !client) return
     const parsed = Number.parseFloat(amounts[row.id] ?? "")
     if (!Number.isFinite(parsed) || parsed <= 0) return
-    const units = usdcUnits(parsed)
+    const units = usdgUnits(parsed)
     const allowance = await client.readContract({
       abi: erc20Abi,
-      address: usdc,
+      address: usdg,
       functionName: "allowance",
       args: [address, desk]
     })
     if (allowance < units) {
-      writeContract({ abi: erc20Abi, address: usdc, functionName: "approve", args: [desk, units] })
+      writeContract({ abi: erc20Abi, address: usdg, functionName: "approve", args: [desk, units] })
     } else {
       writeContract({ abi: deskAbi, address: desk, functionName: "fund", args: [BigInt(row.id), units] })
     }
@@ -180,9 +180,9 @@ function LivePartnerships() {
 
               {row.status === 0 ? (
                 <div className="flex gap-2.5">
-                  <Field
+                  <AmountField
                     inputMode="decimal"
-                    placeholder="USDG amount"
+                    placeholder="0.00"
                     value={amounts[row.id] ?? ""}
                     onChange={event => setAmounts(current => ({ ...current, [row.id]: event.target.value }))}
                   />

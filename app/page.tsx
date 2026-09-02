@@ -3,9 +3,9 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useAccount, usePublicClient } from "wagmi"
-import { HealthBar, PageHeader, Panel, Stat } from "@/components/ui"
+import { HealthBar, PageHeader, Panel, Stat, UsdgMark } from "@/components/ui"
 import { demoPositions, maxLtvFor, passport, usd } from "@/lib/demo"
-import { ONE_1E18, erc8056Abi, fromUsdcUnits, isLive, liveAssets, poolAddress, safixPoolAbi, uiTokenAmount } from "@/lib/safix"
+import { ONE_1E18, erc8056Abi, fromUsdgUnits, isLive, liveAssets, poolAddress, safixPoolAbi, uiTokenAmount } from "@/lib/safix"
 
 type LiveRow = {
   symbol: string
@@ -46,7 +46,7 @@ function LiveDashboard() {
           client.readContract({
             abi: safixPoolAbi,
             address: pool,
-            functionName: "collateralValueUsdc",
+            functionName: "collateralValueStable",
             args: [asset.address, positionReads[index][0]]
           })
         )
@@ -70,12 +70,12 @@ function LiveDashboard() {
           .map((asset, index) => ({
             symbol: asset.symbol,
             locked: uiTokenAmount(positionReads[index][0], multipliers[index]),
-            value: fromUsdcUnits(valueReads[index]),
-            debt: fromUsdcUnits(positionReads[index][1])
+            value: fromUsdgUnits(valueReads[index]),
+            debt: fromUsdgUnits(positionReads[index][1])
           }))
           .filter(row => row.locked > 0 || row.debt > 0)
       )
-      setDeposit(fromUsdcUnits(compounded))
+      setDeposit(fromUsdgUnits(compounded))
       setLoaded(true)
     }
     load()
@@ -98,7 +98,11 @@ function LiveDashboard() {
           hint={address ? `${rows.length} position${rows.length === 1 ? "" : "s"}` : "Connect a wallet"}
         />
         <Stat label="Active debt" value={address ? usd(totalDebt) : "–"} hint="Fixed since draw, no accrual" />
-        <Stat label="Pool deposit" value={address ? usd(deposit) : "–"} hint="Compounded after liquidations" />
+        <Stat
+          label={<><UsdgMark className="h-3.5 w-3.5" />Pool deposit</>}
+          value={address ? usd(deposit) : "–"}
+          hint="Compounded after liquidations"
+        />
         <Stat label="Network" value="Live" hint="Reading Safix contracts onchain" />
       </div>
 

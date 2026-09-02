@@ -2,18 +2,18 @@
 
 import { useEffect, useState } from "react"
 import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
-import { ConfirmedLink, Field, PageHeader, Panel, PrimaryButton, Stat } from "@/components/ui"
+import { AmountField, ConfirmedLink, PageHeader, Panel, PrimaryButton, Stat, Usdg, UsdgMark } from "@/components/ui"
 import { poolStats, usd } from "@/lib/demo"
 import {
   erc20Abi,
   fromTokenUnits,
-  fromUsdcUnits,
+  fromUsdgUnits,
   isLive,
   liveAssets,
   poolAddress,
   safixPoolAbi,
-  usdcAddress,
-  usdcUnits
+  usdgAddress,
+  usdgUnits
 } from "@/lib/safix"
 
 function LivePool() {
@@ -35,14 +35,14 @@ function LivePool() {
   })
   const allowance = useReadContract({
     abi: erc20Abi,
-    address: usdcAddress,
+    address: usdgAddress,
     functionName: "allowance",
     args: address && poolAddress ? [address, poolAddress] : undefined,
     query: { enabled: Boolean(address) }
   })
-  const usdcBalance = useReadContract({
+  const usdgBalance = useReadContract({
     abi: erc20Abi,
-    address: usdcAddress,
+    address: usdgAddress,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
     query: { enabled: Boolean(address) }
@@ -63,21 +63,21 @@ function LivePool() {
       totalDeposits.refetch()
       compounded.refetch()
       allowance.refetch()
-      usdcBalance.refetch()
+      usdgBalance.refetch()
       firstGain.refetch()
     }
   }, [receipt.isSuccess])
 
   const parsed = Number.parseFloat(amount)
-  const units = Number.isFinite(parsed) && parsed > 0 ? usdcUnits(parsed) : 0n
+  const units = Number.isFinite(parsed) && parsed > 0 ? usdgUnits(parsed) : 0n
   const needsApproval = mode === "deposit" && units > 0n && (allowance.data ?? 0n) < units
   const busy = isPending || (Boolean(txHash) && receipt.isLoading)
 
   const submit = () => {
-    if (!poolAddress || !usdcAddress || units === 0n) return
+    if (!poolAddress || !usdgAddress || units === 0n) return
     if (mode === "deposit") {
       if (needsApproval) {
-        writeContract({ abi: erc20Abi, address: usdcAddress, functionName: "approve", args: [poolAddress, units] })
+        writeContract({ abi: erc20Abi, address: usdgAddress, functionName: "approve", args: [poolAddress, units] })
       } else {
         writeContract({ abi: safixPoolAbi, address: poolAddress, functionName: "deposit", args: [units] })
       }
@@ -96,9 +96,9 @@ function LivePool() {
     })
   }
 
-  const mintTestUsdc = () => {
-    if (!usdcAddress || !address) return
-    writeContract({ abi: erc20Abi, address: usdcAddress, functionName: "mint", args: [address, 10_000n * 10n ** 6n] })
+  const mintTestUsdg = () => {
+    if (!usdgAddress || !address) return
+    writeContract({ abi: erc20Abi, address: usdgAddress, functionName: "mint", args: [address, 10_000n * 10n ** 6n] })
   }
 
   return (
@@ -106,12 +106,12 @@ function LivePool() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat
           label="Pool size"
-          value={totalDeposits.data !== undefined ? usd(fromUsdcUnits(totalDeposits.data), 0) : "…"}
+          value={totalDeposits.data !== undefined ? usd(fromUsdgUnits(totalDeposits.data), 0) : "…"}
           hint="USDG deposited by providers"
         />
         <Stat
           label="Your deposit"
-          value={address && compounded.data !== undefined ? usd(fromUsdcUnits(compounded.data)) : "–"}
+          value={address && compounded.data !== undefined ? usd(fromUsdgUnits(compounded.data)) : "–"}
           hint={address ? "Compounded after liquidations" : "Connect a wallet"}
         />
         <Stat
@@ -120,14 +120,14 @@ function LivePool() {
           hint="Collateral received from liquidations"
         />
         <Stat
-          label="Your USDG"
-          value={address && usdcBalance.data !== undefined ? usd(fromUsdcUnits(usdcBalance.data)) : "–"}
+          label={<><UsdgMark className="h-3.5 w-3.5" />Your USDG</>}
+          value={address && usdgBalance.data !== undefined ? usd(fromUsdgUnits(usdgBalance.data)) : "–"}
           hint="Wallet balance"
         />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
-        <Panel title={mode === "deposit" ? "Deposit USDG" : "Withdraw USDG"}>
+        <Panel title={<><UsdgMark className="h-[18px] w-[18px]" />{mode === "deposit" ? "Deposit USDG" : "Withdraw USDG"}</>}>
           <div className="flex flex-col gap-4">
             <div className="flex gap-2">
               {(["deposit", "withdraw"] as const).map(candidate => (
@@ -144,7 +144,7 @@ function LivePool() {
                 </button>
               ))}
             </div>
-            <Field
+            <AmountField
               inputMode="decimal"
               placeholder="0.00"
               value={amount}
@@ -156,7 +156,7 @@ function LivePool() {
                 : mode === "withdraw"
                   ? "Withdraw"
                   : needsApproval
-                    ? "Approve USDG"
+                    ? <span className="inline-flex items-center gap-1.5">Approve <Usdg /></span>
                     : "Deposit"}
             </PrimaryButton>
             <button
@@ -167,11 +167,11 @@ function LivePool() {
               Claim liquidation gains
             </button>
             <button
-              onClick={mintTestUsdc}
+              onClick={mintTestUsdg}
               disabled={busy || !address}
               className="rounded-[3px] border border-line px-5 py-2 text-[12.5px] font-medium tracking-[-0.01em] text-haze transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
             >
-              Mint 10,000 test USDG
+              <span className="inline-flex items-center gap-1.5">Mint 10,000 test <Usdg /></span>
             </button>
             <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">
               {error
@@ -219,7 +219,7 @@ function DemoPool() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
-        <Panel title={mode === "deposit" ? "Deposit USDG" : "Withdraw USDG"}>
+        <Panel title={<><UsdgMark className="h-[18px] w-[18px]" />{mode === "deposit" ? "Deposit USDG" : "Withdraw USDG"}</>}>
           <div className="flex flex-col gap-4">
             <div className="flex gap-2">
               {(["deposit", "withdraw"] as const).map(candidate => (
@@ -239,7 +239,7 @@ function DemoPool() {
                 </button>
               ))}
             </div>
-            <Field
+            <AmountField
               inputMode="decimal"
               placeholder="0.00"
               value={amount}

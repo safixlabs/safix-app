@@ -2,19 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
-import { ConfirmedLink, Field, HealthBar, PageHeader, Panel, PrimaryButton } from "@/components/ui"
+import { AmountField, ConfirmedLink, Field, HealthBar, PageHeader, Panel, PrimaryButton, Usdg, UsdgMark } from "@/components/ui"
 import { collateralAssets, originationFeeRate, usd } from "@/lib/demo"
 import {
   erc20Abi,
   erc8056Abi,
-  fromUsdcUnits,
+  fromUsdgUnits,
   isLive,
   liveAssets,
   poolAddress,
   safixPoolAbi,
   uiTokenAmount,
-  usdcAddress,
-  usdcUnits
+  usdgAddress,
+  usdgUnits
 } from "@/lib/safix"
 
 const tokenUnits = (value: number) => BigInt(Math.round(value * 1e6)) * 10n ** 12n
@@ -56,9 +56,9 @@ function LiveBorrow() {
     args: address && poolAddress ? [address, poolAddress] : undefined,
     query: { enabled: Boolean(address && asset) }
   })
-  const usdcAllowance = useReadContract({
+  const usdgAllowance = useReadContract({
     abi: erc20Abi,
-    address: usdcAddress,
+    address: usdgAddress,
     functionName: "allowance",
     args: address && poolAddress ? [address, poolAddress] : undefined,
     query: { enabled: Boolean(address) }
@@ -89,7 +89,7 @@ function LiveBorrow() {
       position.refetch()
       tokenBalance.refetch()
       tokenAllowance.refetch()
-      usdcAllowance.refetch()
+      usdgAllowance.refetch()
     }
   }, [receipt.isSuccess])
 
@@ -102,10 +102,10 @@ function LiveBorrow() {
   const totalDrawn = position.data?.[2] ?? 0n
   const closeOwed = debt + (totalDrawn * BigInt(redeemBps.data ?? 30)) / 10_000n
   const hasPosition = collateral > 0n || debt > 0n
-  const needsCloseApproval = closeOwed > 0n && (usdcAllowance.data ?? 0n) < closeOwed
+  const needsCloseApproval = closeOwed > 0n && (usdgAllowance.data ?? 0n) < closeOwed
 
-  const lockedValueUsdc = (collateral * price1e18) / 10n ** 30n
-  const capacity = (lockedValueUsdc * BigInt(maxLtvBps)) / 10_000n
+  const lockedValueUsdg = (collateral * price1e18) / 10n ** 30n
+  const capacity = (lockedValueUsdg * BigInt(maxLtvBps)) / 10_000n
   const headroom = capacity > debt ? capacity - debt : 0n
 
   const lockUnits = useMemo(() => {
@@ -115,20 +115,20 @@ function LiveBorrow() {
 
   const drawUnits = useMemo(() => {
     const parsed = Number.parseFloat(drawAmount)
-    return Number.isFinite(parsed) && parsed > 0 ? usdcUnits(parsed) : 0n
+    return Number.isFinite(parsed) && parsed > 0 ? usdgUnits(parsed) : 0n
   }, [drawAmount])
 
   const repayUnits = useMemo(() => {
     const parsed = Number.parseFloat(repayAmount)
-    return Number.isFinite(parsed) && parsed > 0 ? usdcUnits(parsed) : 0n
+    return Number.isFinite(parsed) && parsed > 0 ? usdgUnits(parsed) : 0n
   }, [repayAmount])
 
   const fee = (drawUnits * BigInt(feeBps.data ?? 50)) / 10_000n
   const debtAfter = debt + drawUnits + fee
   const overCapacity = drawUnits > 0n && debtAfter > capacity
   const needsLockApproval = lockUnits > 0n && (tokenAllowance.data ?? 0n) < lockUnits
-  const needsRepayApproval = repayUnits > 0n && (usdcAllowance.data ?? 0n) < repayUnits
-  const health = debtAfter > 0n ? Number((lockedValueUsdc * 100n) / debtAfter) / 100 : 0
+  const needsRepayApproval = repayUnits > 0n && (usdgAllowance.data ?? 0n) < repayUnits
+  const health = debtAfter > 0n ? Number((lockedValueUsdg * 100n) / debtAfter) / 100 : 0
 
   const lock = () => {
     if (!asset || !poolAddress || lockUnits === 0n) return
@@ -145,18 +145,18 @@ function LiveBorrow() {
   }
 
   const repay = () => {
-    if (!asset || !poolAddress || !usdcAddress || repayUnits === 0n) return
+    if (!asset || !poolAddress || !usdgAddress || repayUnits === 0n) return
     if (needsRepayApproval) {
-      writeContract({ abi: erc20Abi, address: usdcAddress, functionName: "approve", args: [poolAddress, repayUnits] })
+      writeContract({ abi: erc20Abi, address: usdgAddress, functionName: "approve", args: [poolAddress, repayUnits] })
     } else {
       writeContract({ abi: safixPoolAbi, address: poolAddress, functionName: "repay", args: [asset.address, repayUnits] })
     }
   }
 
   const closeOut = () => {
-    if (!asset || !poolAddress || !usdcAddress || !hasPosition) return
+    if (!asset || !poolAddress || !usdgAddress || !hasPosition) return
     if (needsCloseApproval) {
-      writeContract({ abi: erc20Abi, address: usdcAddress, functionName: "approve", args: [poolAddress, closeOwed] })
+      writeContract({ abi: erc20Abi, address: usdgAddress, functionName: "approve", args: [poolAddress, closeOwed] })
     } else {
       writeContract({ abi: safixPoolAbi, address: poolAddress, functionName: "closePosition", args: [asset.address] })
     }
@@ -198,7 +198,7 @@ function LiveBorrow() {
           <div className="flex items-baseline justify-between text-[13px] tracking-[-0.01em]">
             <span className="text-haze">Locked</span>
             <span className="text-mist [font-variant-numeric:tabular-nums]">
-              {uiTokenAmount(collateral, uiMultiplier.data).toFixed(4)} {asset?.symbol} · {usd(fromUsdcUnits(lockedValueUsdc))}
+              {uiTokenAmount(collateral, uiMultiplier.data).toFixed(4)} {asset?.symbol} · {usd(fromUsdgUnits(lockedValueUsdg))}
             </span>
           </div>
           <Field
@@ -223,9 +223,9 @@ function LiveBorrow() {
         </div>
       </Panel>
 
-      <Panel title="Draw USDG">
+      <Panel title={<><UsdgMark className="h-[18px] w-[18px]" />Draw USDG</>}>
         <div className="flex flex-col gap-4">
-          <Field
+          <AmountField
             inputMode="decimal"
             placeholder="0.00"
             value={drawAmount}
@@ -234,16 +234,16 @@ function LiveBorrow() {
           <dl className="flex flex-col divide-y divide-line text-[13.5px] tracking-[-0.01em]">
             <div className="flex items-baseline justify-between py-2.5">
               <dt className="text-haze">Borrow capacity</dt>
-              <dd className="text-mist [font-variant-numeric:tabular-nums]">{usd(fromUsdcUnits(headroom))}</dd>
+              <dd className="text-mist [font-variant-numeric:tabular-nums]">{usd(fromUsdgUnits(headroom))}</dd>
             </div>
             <div className="flex items-baseline justify-between py-2.5">
               <dt className="text-haze">One-time fee</dt>
-              <dd className="text-mist [font-variant-numeric:tabular-nums]">{usd(fromUsdcUnits(fee))}</dd>
+              <dd className="text-mist [font-variant-numeric:tabular-nums]">{usd(fromUsdgUnits(fee))}</dd>
             </div>
             <div className="flex items-baseline justify-between py-2.5">
               <dt className="text-haze">Debt after draw</dt>
               <dd className="font-semibold text-fog [font-variant-numeric:tabular-nums]">
-                {usd(fromUsdcUnits(debtAfter))}
+                {usd(fromUsdgUnits(debtAfter))}
               </dd>
             </div>
             <div className="flex items-center justify-between py-2.5">
@@ -256,16 +256,16 @@ function LiveBorrow() {
             onClick={draw}
             className="w-full"
           >
-            {overCapacity ? "Exceeds capacity" : busy ? "Confirming…" : "Draw USDG"}
+            {overCapacity ? "Exceeds capacity" : busy ? "Confirming…" : <span className="inline-flex items-center gap-1.5">Draw <Usdg /></span>}
           </PrimaryButton>
 
           <div className="flex flex-col gap-3 border-t border-line pt-4">
             <div className="flex items-baseline justify-between text-[13px] tracking-[-0.01em]">
               <span className="text-haze">Current debt</span>
-              <span className="text-mist [font-variant-numeric:tabular-nums]">{usd(fromUsdcUnits(debt))}</span>
+              <span className="text-mist [font-variant-numeric:tabular-nums]">{usd(fromUsdgUnits(debt))}</span>
             </div>
             <div className="flex gap-2.5">
-              <Field
+              <AmountField
                 inputMode="decimal"
                 placeholder="Repay amount"
                 value={repayAmount}
@@ -286,8 +286,8 @@ function LiveBorrow() {
                 className="rounded-[3px] border border-line px-5 py-2 text-[12.5px] font-medium tracking-[-0.01em] text-haze transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
               >
                 {needsCloseApproval
-                  ? `Approve ${usd(fromUsdcUnits(closeOwed))} to close`
-                  : `Close position, pay ${usd(fromUsdcUnits(closeOwed))}, unlock all collateral`}
+                  ? `Approve ${usd(fromUsdgUnits(closeOwed))} to close`
+                  : `Close position, pay ${usd(fromUsdgUnits(closeOwed))}, unlock all collateral`}
               </button>
             ) : null}
           </div>
@@ -366,10 +366,10 @@ function DemoBorrow() {
         </ul>
       </Panel>
 
-      <Panel title="Draw USDG">
+      <Panel title={<><UsdgMark className="h-[18px] w-[18px]" />Draw USDG</>}>
         <div className="flex flex-col gap-4">
           <div className="flex gap-2.5">
-            <Field
+            <AmountField
               inputMode="decimal"
               placeholder="0.00"
               value={amount}
@@ -421,7 +421,7 @@ function DemoBorrow() {
             onClick={() => setDrawn(true)}
             className="w-full"
           >
-            {overCapacity ? "Exceeds capacity" : "Draw USDG"}
+            {overCapacity ? "Exceeds capacity" : <span className="inline-flex items-center gap-1.5">Draw <Usdg /></span>}
           </PrimaryButton>
 
           <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">

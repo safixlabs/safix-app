@@ -16,6 +16,38 @@ export function ConfirmedLink({ hash }: { hash?: `0x${string}` }) {
   )
 }
 
+export function UsdgMark({ className = "h-4 w-4" }: { className?: string }) {
+  return <img src="/usdg.png" alt="" className={`shrink-0 ${className}`} />
+}
+
+export function Usdg({ className = "" }: { className?: string }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap ${className}`}>
+      <UsdgMark className="h-[1.05em] w-[1.05em]" />
+      USDG
+    </span>
+  )
+}
+
+export function UsdgTag() {
+  return (
+    <span className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1.5 rounded-[3px] border border-line bg-panel px-2 py-1 text-[11.5px] tracking-[-0.01em] text-mist">
+      <UsdgMark className="h-3.5 w-3.5" />
+      USDG
+    </span>
+  )
+}
+
+export function AmountField(props: InputHTMLAttributes<HTMLInputElement>) {
+  const { className, ...rest } = props
+  return (
+    <span className="relative block w-full">
+      <Field {...rest} className={`pr-[86px] ${className ?? ""}`} />
+      <UsdgTag />
+    </span>
+  )
+}
+
 export function DemoTag({ label = "Demo data" }: { label?: string }) {
   return (
     <span className="inline-flex items-center gap-2 rounded-[3px] border border-line bg-panel/80 px-3.5 py-1.5 text-[12px] tracking-[-0.02em] text-haze">
@@ -41,10 +73,10 @@ export function PageHeader({ title, lead, badge }: { title: string; lead: string
   )
 }
 
-export function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+export function Stat({ label, value, hint }: { label: ReactNode; value: string; hint?: string }) {
   return (
     <div className="rounded-[4px] border border-line bg-panel/80 p-5">
-      <p className="text-[12.5px] tracking-[-0.02em] text-haze">{label}</p>
+      <p className="flex items-center gap-1.5 text-[12.5px] tracking-[-0.02em] text-haze">{label}</p>
       <p className="mt-2 text-[24px] font-bold leading-none tracking-[-0.01em] text-fog [font-variant-numeric:tabular-nums] md:text-[27px]">
         {value}
       </p>
@@ -53,10 +85,10 @@ export function Stat({ label, value, hint }: { label: string; value: string; hin
   )
 }
 
-export function Panel({ title, children }: { title: string; children: ReactNode }) {
+export function Panel({ title, children }: { title: ReactNode; children: ReactNode }) {
   return (
     <section className="rounded-[4px] border border-line bg-panel/80 p-6 md:p-7">
-      <h2 className="text-[18px] font-semibold tracking-[-0.01em] text-fog">{title}</h2>
+      <h2 className="flex items-center gap-2 text-[18px] font-semibold tracking-[-0.01em] text-fog">{title}</h2>
       <div className="mt-5">{children}</div>
     </section>
   )
