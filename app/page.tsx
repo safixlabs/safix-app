@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useAccount, usePublicClient } from "wagmi"
-import { HealthBar, PageHeader, Panel, Stat, UsdgMark } from "@/components/ui"
+import { AssetMark, HealthBar, PageHeader, Panel, Stat, UsdgMark } from "@/components/ui"
 import { demoPositions, maxLtvFor, passport, usd } from "@/lib/demo"
 import { ONE_1E18, erc8056Abi, fromUsdgUnits, isLive, liveAssets, poolAddress, safixPoolAbi, uiTokenAmount } from "@/lib/safix"
 
@@ -119,9 +119,12 @@ function LiveDashboard() {
           <ul className="flex flex-col divide-y divide-line">
             {rows.map(row => (
               <li key={row.symbol} className="grid grid-cols-2 items-center gap-3 py-4 sm:grid-cols-4">
-                <div>
-                  <p className="text-[15px] font-semibold tracking-[-0.01em] text-fog">{row.symbol}</p>
-                  <p className="mt-1 text-[12px] tracking-[-0.02em] text-haze">{row.locked.toFixed(4)} locked</p>
+                <div className="flex items-center gap-3">
+                  <AssetMark symbol={row.symbol} className="h-9 w-9" />
+                  <div>
+                    <p className="text-[15px] font-semibold tracking-[-0.01em] text-fog">{row.symbol}</p>
+                    <p className="mt-1 text-[12px] tracking-[-0.02em] text-haze">{row.locked.toFixed(4)} locked</p>
+                  </div>
                 </div>
                 <div>
                   <p className="text-[12px] tracking-[-0.02em] text-haze">Value</p>
@@ -163,9 +166,12 @@ function DemoDashboard() {
         <ul className="flex flex-col divide-y divide-line">
           {demoPositions.map(position => (
             <li key={position.id} className="grid grid-cols-2 items-center gap-3 py-4 sm:grid-cols-4">
-              <div>
-                <p className="text-[15px] font-semibold tracking-[-0.01em] text-fog">{position.symbol}</p>
-                <p className="mt-1 text-[12px] tracking-[-0.02em] text-haze">{position.locked} locked</p>
+              <div className="flex items-center gap-3">
+                <AssetMark symbol={position.symbol} className="h-9 w-9" />
+                <div>
+                  <p className="text-[15px] font-semibold tracking-[-0.01em] text-fog">{position.symbol}</p>
+                  <p className="mt-1 text-[12px] tracking-[-0.02em] text-haze">{position.locked} locked</p>
+                </div>
               </div>
               <div>
                 <p className="text-[12px] tracking-[-0.02em] text-haze">Value</p>

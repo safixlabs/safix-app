@@ -1,9 +1,23 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
-import { AmountField, ConfirmedLink, PageHeader, Panel, PrimaryButton, Stat, Usdg, UsdgMark } from "@/components/ui"
-import { poolStats, usd } from "@/lib/demo"
+import { useAccount, useReadContract, useReadContracts, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
+import {
+  AmountField,
+  AssetMark,
+  ConfirmedLink,
+  Meter,
+  PageHeader,
+  Panel,
+  PrimaryButton,
+  QuickAmounts,
+  Segmented,
+  Stat,
+  SummaryRow,
+  Usdg,
+  UsdgMark
+} from "@/components/ui"
+import { usd } from "@/lib/demo"
 import {
   erc20Abi,
   fromTokenUnits,
@@ -16,43 +30,224 @@ import {
   usdgUnits
 } from "@/lib/safix"
 
+type Mode = "deposit" | "withdraw"
+type GainRow = { symbol: string; amount: number }
+
+const modeOptions = [
+  { value: "deposit" as Mode, label: "Deposit" },
+  { value: "withdraw" as Mode, label: "Withdraw" }
+]
+
+function PoolStats({
+  poolSize,
+  available,
+  yourDeposit,
+  connected
+}: {
+  poolSize: number
+  available: number
+  yourDeposit: number
+  connected: boolean
+}) {
+  const deployed = Math.max(0, poolSize - available)
+  const utilisation = poolSize > 0 ? deployed / poolSize : 0
+  const share = poolSize > 0 ? yourDeposit / poolSize : 0
+
+  return (
+    <div className="grid gap-4 md:grid-cols-3">
+      <Stat
+        label={<><UsdgMark className="h-3.5 w-3.5" />Pool size</>}
+        value={usd(poolSize, 0)}
+        hint="Deposited by liquidity providers"
+      />
+      <div className="rounded-[4px] border border-line bg-panel/80 p-5">
+        <p className="text-[12.5px] tracking-[-0.02em] text-haze">Deployed to loans</p>
+        <p className="mt-2 text-[24px] font-bold leading-none tracking-[-0.01em] text-fog [font-variant-numeric:tabular-nums] md:text-[27px]">
+          {usd(deployed, 0)}
+        </p>
+        <div className="mt-4">
+          <Meter value={utilisation} label={`${(utilisation * 100).toFixed(1)}% utilised · ${usd(available, 0)} idle`} />
+        </div>
+      </div>
+      <Stat
+        label="Your share"
+        value={connected ? `${(share * 100).toFixed(2)}%` : "–"}
+        hint={connected ? `${usd(yourDeposit)} of the pool` : "Connect a wallet"}
+      />
+    </div>
+  )
+}
+
+function GainsCard({
+  rows,
+  onClaim,
+  disabled,
+  note
+}: {
+  rows: GainRow[]
+  onClaim: () => void
+  disabled: boolean
+  note: string
+}) {
+  const claimable = rows.filter(row => row.amount > 0)
+
+  return (
+    <Panel title="Claimable gains">
+      {claimable.length === 0 ? (
+        <p className="py-2 text-[14px] leading-[1.6] tracking-[-0.01em] text-haze">
+          No liquidation gains yet. When a position is liquidated, its collateral arrives here at a
+          discount and can be claimed at any time.
+        </p>
+      ) : (
+        <ul className="flex flex-col divide-y divide-line">
+          {claimable.map(row => (
+            <li key={row.symbol} className="flex items-center gap-3.5 py-3.5">
+              <AssetMark symbol={row.symbol} className="h-9 w-9" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[14.5px] font-semibold tracking-[-0.01em] text-fog">{row.symbol}</p>
+                <p className="mt-0.5 text-[12px] tracking-[-0.02em] text-haze">Seized collateral</p>
+              </div>
+              <p className="text-[14px] tracking-[-0.01em] text-mist [font-variant-numeric:tabular-nums]">
+                {row.amount.toFixed(4)}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="mt-5 flex flex-col gap-3">
+        <PrimaryButton onClick={onClaim} disabled={disabled || claimable.length === 0} className="w-full">
+          Claim all
+        </PrimaryButton>
+        <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">{note}</p>
+      </div>
+    </Panel>
+  )
+}
+
+function EarnCard() {
+  const points = [
+    {
+      title: "Liquidations",
+      body: "When a position falls below its required level, the pool absorbs the debt and receives the collateral at a discount."
+    },
+    {
+      title: "Protocol rewards",
+      body: "Rewards are distributed to providers on top of liquidation gains once the token is live."
+    },
+    {
+      title: "Never from time",
+      body: "There is no rate and no yield from waiting. A quiet market is a quiet pool, and that is by design."
+    }
+  ]
+
+  return (
+    <Panel title="How the pool earns">
+      <ul className="flex flex-col divide-y divide-line">
+        {points.map(point => (
+          <li key={point.title} className="py-3.5 first:pt-0 last:pb-0">
+            <p className="text-[14px] font-semibold tracking-[-0.01em] text-fog">{point.title}</p>
+            <p className="mt-1.5 text-[13.5px] leading-[1.6] tracking-[-0.01em] text-mist">{point.body}</p>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  )
+}
+
+function LiquidityCard({
+  mode,
+  setMode,
+  amount,
+  setAmount,
+  walletBalance,
+  yourDeposit,
+  poolSize,
+  actionLabel,
+  onSubmit,
+  disabled,
+  note,
+  extra
+}: {
+  mode: Mode
+  setMode: (next: Mode) => void
+  amount: string
+  setAmount: (next: string) => void
+  walletBalance: number
+  yourDeposit: number
+  poolSize: number
+  actionLabel: React.ReactNode
+  onSubmit: () => void
+  disabled: boolean
+  note: React.ReactNode
+  extra?: React.ReactNode
+}) {
+  const parsed = Number.parseFloat(amount)
+  const value = Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+  const ceiling = mode === "deposit" ? walletBalance : yourDeposit
+  const depositAfter = mode === "deposit" ? yourDeposit + value : Math.max(0, yourDeposit - value)
+  const poolAfter = mode === "deposit" ? poolSize + value : Math.max(0, poolSize - value)
+  const shareAfter = poolAfter > 0 ? depositAfter / poolAfter : 0
+
+  return (
+    <Panel title={<><UsdgMark className="h-[18px] w-[18px]" />Manage liquidity</>}>
+      <div className="flex flex-col gap-4">
+        <Segmented options={modeOptions} value={mode} onChange={setMode} />
+
+        <div className="flex items-baseline justify-between text-[12.5px] tracking-[-0.02em] text-haze">
+          <span>{mode === "deposit" ? "Wallet balance" : "Available to withdraw"}</span>
+          <span className="[font-variant-numeric:tabular-nums] text-mist">{usd(ceiling)}</span>
+        </div>
+
+        <AmountField
+          inputMode="decimal"
+          placeholder="0.00"
+          value={amount}
+          onChange={event => setAmount(event.target.value)}
+        />
+        <QuickAmounts onPick={fraction => setAmount((ceiling * fraction).toFixed(2))} disabled={ceiling <= 0} />
+
+        <div className="flex flex-col divide-y divide-line border-y border-line">
+          <SummaryRow label="Your deposit after" value={usd(depositAfter)} />
+          <SummaryRow label="Share of pool after" value={`${(shareAfter * 100).toFixed(2)}%`} />
+        </div>
+
+        <PrimaryButton onClick={onSubmit} disabled={disabled} className="w-full">
+          {actionLabel}
+        </PrimaryButton>
+        {extra}
+        <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">{note}</p>
+      </div>
+    </Panel>
+  )
+}
+
 function LivePool() {
   const { address } = useAccount()
-  const [mode, setMode] = useState<"deposit" | "withdraw">("deposit")
+  const [mode, setMode] = useState<Mode>("deposit")
   const [amount, setAmount] = useState("")
 
-  const totalDeposits = useReadContract({
-    abi: safixPoolAbi,
-    address: poolAddress,
-    functionName: "totalDeposits"
+  const totals = useReadContracts({
+    contracts: [
+      { abi: safixPoolAbi, address: poolAddress, functionName: "totalDeposits" },
+      { abi: safixPoolAbi, address: poolAddress, functionName: "availableLiquidity" }
+    ]
   })
-  const compounded = useReadContract({
-    abi: safixPoolAbi,
-    address: poolAddress,
-    functionName: "compoundedDepositOf",
-    args: address ? [address] : undefined,
+  const personal = useReadContracts({
+    contracts: [
+      { abi: safixPoolAbi, address: poolAddress, functionName: "compoundedDepositOf", args: address ? [address] : undefined },
+      { abi: erc20Abi, address: usdgAddress, functionName: "balanceOf", args: address ? [address] : undefined },
+      { abi: erc20Abi, address: usdgAddress, functionName: "allowance", args: address && poolAddress ? [address, poolAddress] : undefined }
+    ],
     query: { enabled: Boolean(address) }
   })
-  const allowance = useReadContract({
-    abi: erc20Abi,
-    address: usdgAddress,
-    functionName: "allowance",
-    args: address && poolAddress ? [address, poolAddress] : undefined,
-    query: { enabled: Boolean(address) }
-  })
-  const usdgBalance = useReadContract({
-    abi: erc20Abi,
-    address: usdgAddress,
-    functionName: "balanceOf",
-    args: address ? [address] : undefined,
-    query: { enabled: Boolean(address) }
-  })
-  const firstGain = useReadContract({
-    abi: safixPoolAbi,
-    address: poolAddress,
-    functionName: "gainOf",
-    args: address && liveAssets[0] ? [address, liveAssets[0].address] : undefined,
-    query: { enabled: Boolean(address && liveAssets[0]) }
+  const gains = useReadContracts({
+    contracts: liveAssets.map(asset => ({
+      abi: safixPoolAbi,
+      address: poolAddress,
+      functionName: "gainOf" as const,
+      args: address ? [address, asset.address] : undefined
+    })),
+    query: { enabled: Boolean(address) && liveAssets.length > 0 }
   })
 
   const { writeContract, data: txHash, isPending, error } = useWriteContract()
@@ -60,17 +255,27 @@ function LivePool() {
 
   useEffect(() => {
     if (receipt.isSuccess) {
-      totalDeposits.refetch()
-      compounded.refetch()
-      allowance.refetch()
-      usdgBalance.refetch()
-      firstGain.refetch()
+      totals.refetch()
+      personal.refetch()
+      gains.refetch()
+      setAmount("")
     }
   }, [receipt.isSuccess])
 
+  const poolSize = fromUsdgUnits((totals.data?.[0]?.result as bigint | undefined) ?? 0n)
+  const available = fromUsdgUnits((totals.data?.[1]?.result as bigint | undefined) ?? 0n)
+  const yourDeposit = fromUsdgUnits((personal.data?.[0]?.result as bigint | undefined) ?? 0n)
+  const walletBalance = fromUsdgUnits((personal.data?.[1]?.result as bigint | undefined) ?? 0n)
+  const allowance = (personal.data?.[2]?.result as bigint | undefined) ?? 0n
+
+  const gainRows: GainRow[] = liveAssets.map((asset, index) => ({
+    symbol: asset.symbol,
+    amount: fromTokenUnits((gains.data?.[index]?.result as bigint | undefined) ?? 0n)
+  }))
+
   const parsed = Number.parseFloat(amount)
   const units = Number.isFinite(parsed) && parsed > 0 ? usdgUnits(parsed) : 0n
-  const needsApproval = mode === "deposit" && units > 0n && (allowance.data ?? 0n) < units
+  const needsApproval = mode === "deposit" && units > 0n && allowance < units
   const busy = isPending || (Boolean(txHash) && receipt.isLoading)
 
   const submit = () => {
@@ -101,71 +306,43 @@ function LivePool() {
     writeContract({ abi: erc20Abi, address: usdgAddress, functionName: "mint", args: [address, 10_000n * 10n ** 6n] })
   }
 
+  const status = error ? (
+    error.message.split("\n")[0]
+  ) : receipt.isSuccess ? (
+    <ConfirmedLink hash={txHash} />
+  ) : address ? (
+    "Withdraw any time outside active liquidations."
+  ) : (
+    "Connect a wallet to provide liquidity."
+  )
+
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat
-          label="Pool size"
-          value={totalDeposits.data !== undefined ? usd(fromUsdgUnits(totalDeposits.data), 0) : "…"}
-          hint="USDG deposited by providers"
-        />
-        <Stat
-          label="Your deposit"
-          value={address && compounded.data !== undefined ? usd(fromUsdgUnits(compounded.data)) : "–"}
-          hint={address ? "Compounded after liquidations" : "Connect a wallet"}
-        />
-        <Stat
-          label={`Claimable ${liveAssets[0]?.symbol ?? "gains"}`}
-          value={address && firstGain.data !== undefined ? fromTokenUnits(firstGain.data).toFixed(4) : "–"}
-          hint="Collateral received from liquidations"
-        />
-        <Stat
-          label={<><UsdgMark className="h-3.5 w-3.5" />Your USDG</>}
-          value={address && usdgBalance.data !== undefined ? usd(fromUsdgUnits(usdgBalance.data)) : "–"}
-          hint="Wallet balance"
-        />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
-        <Panel title={<><UsdgMark className="h-[18px] w-[18px]" />{mode === "deposit" ? "Deposit USDG" : "Withdraw USDG"}</>}>
-          <div className="flex flex-col gap-4">
-            <div className="flex gap-2">
-              {(["deposit", "withdraw"] as const).map(candidate => (
-                <button
-                  key={candidate}
-                  onClick={() => setMode(candidate)}
-                  className={`rounded-[3px] px-4 py-2 text-[13px] font-medium tracking-[-0.01em] transition-colors ${
-                    mode === candidate
-                      ? "bg-mint text-carbon"
-                      : "border border-line text-mist hover:text-fog"
-                  }`}
-                >
-                  {candidate === "deposit" ? "Deposit" : "Withdraw"}
-                </button>
-              ))}
-            </div>
-            <AmountField
-              inputMode="decimal"
-              placeholder="0.00"
-              value={amount}
-              onChange={event => setAmount(event.target.value)}
-            />
-            <PrimaryButton disabled={units === 0n || busy || !address} onClick={submit} className="w-full">
-              {busy
-                ? "Confirming…"
-                : mode === "withdraw"
-                  ? "Withdraw"
-                  : needsApproval
-                    ? <span className="inline-flex items-center gap-1.5">Approve <Usdg /></span>
-                    : "Deposit"}
-            </PrimaryButton>
-            <button
-              onClick={claim}
-              disabled={busy || !address}
-              className="rounded-[3px] border border-line px-5 py-2.5 text-[13px] font-medium tracking-[-0.01em] text-mist transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
-            >
-              Claim liquidation gains
-            </button>
+      <PoolStats poolSize={poolSize} available={available} yourDeposit={yourDeposit} connected={Boolean(address)} />
+      <div className="grid items-start gap-4 lg:grid-cols-[1.05fr_1fr]">
+        <LiquidityCard
+          mode={mode}
+          setMode={setMode}
+          amount={amount}
+          setAmount={setAmount}
+          walletBalance={walletBalance}
+          yourDeposit={yourDeposit}
+          poolSize={poolSize}
+          disabled={units === 0n || busy || !address}
+          onSubmit={submit}
+          actionLabel={
+            busy ? (
+              "Confirming…"
+            ) : mode === "withdraw" ? (
+              "Withdraw"
+            ) : needsApproval ? (
+              <span className="inline-flex items-center gap-1.5">Approve <Usdg /></span>
+            ) : (
+              "Deposit"
+            )
+          }
+          note={status}
+          extra={
             <button
               onClick={mintTestUsdg}
               disabled={busy || !address}
@@ -173,111 +350,73 @@ function LivePool() {
             >
               <span className="inline-flex items-center gap-1.5">Mint 10,000 test <Usdg /></span>
             </button>
-            <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">
-              {error
-                ? error.message.split("\n")[0]
-                : receipt.isSuccess
-                  ? <ConfirmedLink hash={txHash} />
-                  : "Withdraw any time outside active liquidations."}
-            </p>
-          </div>
-        </Panel>
-
-        <Panel title="How the pool earns">
-          <ul className="flex flex-col divide-y divide-line text-[14px] leading-[1.6] tracking-[-0.01em] text-mist">
-            <li className="py-3">
-              When a position falls below the required collateral level, the pool absorbs its debt and
-              receives the collateral at a discount.
-            </li>
-            <li className="py-3">
-              Liquidation gains accrue per asset and can be claimed at any time. Protocol rewards come
-              on top once live.
-            </li>
-            <li className="py-3">
-              There is no rate and no yield from time. A quiet market is a quiet pool, and that is by
-              design.
-            </li>
-          </ul>
-        </Panel>
+          }
+        />
+        <div className="flex flex-col gap-4">
+          <GainsCard
+            rows={gainRows}
+            onClaim={claim}
+            disabled={busy || !address}
+            note={address ? "Gains accrue per asset and never expire." : "Connect a wallet to see your gains."}
+          />
+          <EarnCard />
+        </div>
       </div>
     </>
   )
 }
 
 function DemoPool() {
-  const [mode, setMode] = useState<"deposit" | "withdraw">("deposit")
+  const [mode, setMode] = useState<Mode>("deposit")
   const [amount, setAmount] = useState("")
   const [submitted, setSubmitted] = useState(false)
 
+  const poolSize = 2_412_000
+  const available = 903_400
+  const yourDeposit = 5_000
+  const walletBalance = 12_400
+  const gainRows: GainRow[] = [
+    { symbol: "tBILL", amount: 1.482 },
+    { symbol: "bNVDA", amount: 0.3125 },
+    { symbol: "tGOLD", amount: 0.0164 }
+  ]
+
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Pool size" value={usd(poolStats.tvl, 0)} hint="USDG deposited by providers" />
-        <Stat label="Your deposit" value={usd(poolStats.yourDeposit, 0)} hint={`${(poolStats.poolShare * 100).toFixed(2)}% of the pool`} />
-        <Stat label="Liquidation gains" value={usd(poolStats.liquidationGains)} hint="Discounted collateral received" />
-        <Stat label="Protocol rewards" value={usd(poolStats.rewards)} hint="Lifetime, claimable" />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
-        <Panel title={<><UsdgMark className="h-[18px] w-[18px]" />{mode === "deposit" ? "Deposit USDG" : "Withdraw USDG"}</>}>
-          <div className="flex flex-col gap-4">
-            <div className="flex gap-2">
-              {(["deposit", "withdraw"] as const).map(candidate => (
-                <button
-                  key={candidate}
-                  onClick={() => {
-                    setMode(candidate)
-                    setSubmitted(false)
-                  }}
-                  className={`rounded-[3px] px-4 py-2 text-[13px] font-medium tracking-[-0.01em] transition-colors ${
-                    mode === candidate
-                      ? "bg-mint text-carbon"
-                      : "border border-line text-mist hover:text-fog"
-                  }`}
-                >
-                  {candidate === "deposit" ? "Deposit" : "Withdraw"}
-                </button>
-              ))}
-            </div>
-            <AmountField
-              inputMode="decimal"
-              placeholder="0.00"
-              value={amount}
-              onChange={event => {
-                setAmount(event.target.value)
-                setSubmitted(false)
-              }}
-            />
-            <PrimaryButton
-              disabled={!(Number.parseFloat(amount) > 0)}
-              onClick={() => setSubmitted(true)}
-              className="w-full"
-            >
-              {mode === "deposit" ? "Deposit" : "Withdraw"}
-            </PrimaryButton>
-            <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">
-              {submitted
-                ? "Demo action recorded. Set the contract addresses to go live."
-                : "Demo mode: no pool contract configured yet."}
-            </p>
-          </div>
-        </Panel>
-
-        <Panel title="How the pool earns">
-          <ul className="flex flex-col divide-y divide-line text-[14px] leading-[1.6] tracking-[-0.01em] text-mist">
-            <li className="py-3">
-              When a position falls below the required collateral level, the pool repays its debt and
-              receives the collateral at a discount.
-            </li>
-            <li className="py-3">
-              Protocol rewards are distributed to providers on top of liquidation gains.
-            </li>
-            <li className="py-3">
-              There is no rate and no yield from time. A quiet market is a quiet pool, and that is by
-              design.
-            </li>
-          </ul>
-        </Panel>
+      <PoolStats poolSize={poolSize} available={available} yourDeposit={yourDeposit} connected />
+      <div className="grid items-start gap-4 lg:grid-cols-[1.05fr_1fr]">
+        <LiquidityCard
+          mode={mode}
+          setMode={next => {
+            setMode(next)
+            setSubmitted(false)
+          }}
+          amount={amount}
+          setAmount={next => {
+            setAmount(next)
+            setSubmitted(false)
+          }}
+          walletBalance={walletBalance}
+          yourDeposit={yourDeposit}
+          poolSize={poolSize}
+          disabled={!(Number.parseFloat(amount) > 0)}
+          onSubmit={() => setSubmitted(true)}
+          actionLabel={mode === "deposit" ? "Deposit" : "Withdraw"}
+          note={
+            submitted
+              ? "Demo action recorded. Set the contract addresses to go live."
+              : "Demo mode: no pool contract configured yet."
+          }
+        />
+        <div className="flex flex-col gap-4">
+          <GainsCard
+            rows={gainRows}
+            onClaim={() => setSubmitted(true)}
+            disabled={false}
+            note="Demo balances from three liquidations."
+          />
+          <EarnCard />
+        </div>
       </div>
     </>
   )

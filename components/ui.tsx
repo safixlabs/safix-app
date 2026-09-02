@@ -1,4 +1,8 @@
+"use client"
+
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react"
+import { useState } from "react"
+import { assetIconSrc, assetInitials } from "@/lib/assets"
 import { explorerTxUrl } from "@/lib/chain"
 
 export function ConfirmedLink({ hash }: { hash?: `0x${string}` }) {
@@ -13,6 +17,93 @@ export function ConfirmedLink({ hash }: { hash?: `0x${string}` }) {
     >
       Confirmed onchain ↗
     </a>
+  )
+}
+
+export function AssetMark({ symbol, className = "h-8 w-8" }: { symbol: string; className?: string }) {
+  const [failed, setFailed] = useState(false)
+  if (failed) {
+    return (
+      <span
+        className={`flex shrink-0 items-center justify-center rounded-[3px] border border-line bg-carbon text-[10px] font-semibold tracking-[-0.01em] text-mist ${className}`}
+      >
+        {assetInitials(symbol)}
+      </span>
+    )
+  }
+  return (
+    <span className={`flex shrink-0 items-center justify-center overflow-hidden rounded-[3px] bg-carbon ${className}`}>
+      <img
+        src={assetIconSrc(symbol)}
+        alt=""
+        onError={() => setFailed(true)}
+        className="h-full w-full object-contain"
+      />
+    </span>
+  )
+}
+
+export function Meter({ value, label }: { value: number; label?: string }) {
+  const width = Math.max(0, Math.min(100, value * 100))
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="h-1.5 w-full overflow-hidden rounded-[2px] bg-line">
+        <div className="h-full bg-mint transition-[width] duration-500" style={{ width: `${width}%` }} />
+      </div>
+      {label ? <p className="text-[12px] tracking-[-0.02em] text-haze">{label}</p> : null}
+    </div>
+  )
+}
+
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange
+}: {
+  options: { value: T; label: string }[]
+  value: T
+  onChange: (next: T) => void
+}) {
+  return (
+    <div className="flex rounded-[3px] border border-line p-1">
+      {options.map(option => (
+        <button
+          key={option.value}
+          onClick={() => onChange(option.value)}
+          className={`flex-1 rounded-[2px] px-4 py-2 text-[13px] font-medium tracking-[-0.01em] transition-colors ${
+            value === option.value ? "bg-mint text-carbon" : "text-mist hover:text-fog"
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+export function QuickAmounts({ onPick, disabled }: { onPick: (fraction: number) => void; disabled?: boolean }) {
+  return (
+    <div className="flex gap-2">
+      {[0.25, 0.5, 0.75, 1].map(fraction => (
+        <button
+          key={fraction}
+          onClick={() => onPick(fraction)}
+          disabled={disabled}
+          className="flex-1 rounded-[3px] border border-line py-1.5 text-[12px] tracking-[-0.01em] text-haze transition-colors hover:border-mint hover:text-mint disabled:opacity-40"
+        >
+          {fraction === 1 ? "Max" : `${fraction * 100}%`}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+export function SummaryRow({ label, value }: { label: ReactNode; value: ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 py-2.5 text-[13.5px] tracking-[-0.01em]">
+      <span className="text-haze">{label}</span>
+      <span className="text-right text-mist [font-variant-numeric:tabular-nums]">{value}</span>
+    </div>
   )
 }
 

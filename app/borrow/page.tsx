@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
-import { AmountField, ConfirmedLink, Field, HealthBar, PageHeader, Panel, PrimaryButton, Usdg, UsdgMark } from "@/components/ui"
+import { AmountField, AssetMark, ConfirmedLink, Field, HealthBar, PageHeader, Panel, PrimaryButton, Usdg, UsdgMark } from "@/components/ui"
 import { collateralAssets, originationFeeRate, usd } from "@/lib/demo"
 import {
   erc20Abi,
@@ -181,12 +181,15 @@ function LiveBorrow() {
                     : "border-line bg-carbon/30 hover:border-haze"
                 }`}
               >
-                <span>
-                  <span className="block text-[14.5px] font-semibold tracking-[-0.01em] text-fog">
-                    {candidate.symbol}
-                  </span>
-                  <span className="mt-0.5 block text-[12px] tracking-[-0.02em] text-haze">
-                    {candidate.name} · {candidate.kind}
+                <span className="flex min-w-0 items-center gap-3">
+                  <AssetMark symbol={candidate.symbol} className="h-9 w-9" />
+                  <span className="min-w-0">
+                    <span className="block text-[14.5px] font-semibold tracking-[-0.01em] text-fog">
+                      {candidate.symbol}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[12px] tracking-[-0.02em] text-haze">
+                      {candidate.name} · {candidate.kind}
+                    </span>
                   </span>
                 </span>
               </button>
@@ -343,12 +346,15 @@ function DemoBorrow() {
                       : "border-line bg-carbon/30 hover:border-haze"
                   }`}
                 >
-                  <span>
-                    <span className="block text-[14.5px] font-semibold tracking-[-0.01em] text-fog">
-                      {candidate.symbol}
-                    </span>
-                    <span className="mt-0.5 block text-[12px] tracking-[-0.02em] text-haze">
-                      {candidate.name} · {candidate.kind}
+                  <span className="flex min-w-0 items-center gap-3">
+                    <AssetMark symbol={candidate.symbol} className="h-9 w-9" />
+                    <span className="min-w-0">
+                      <span className="block text-[14.5px] font-semibold tracking-[-0.01em] text-fog">
+                        {candidate.symbol}
+                      </span>
+                      <span className="mt-0.5 block truncate text-[12px] tracking-[-0.02em] text-haze">
+                        {candidate.name} · {candidate.kind}
+                      </span>
                     </span>
                   </span>
                   <span className="text-right">

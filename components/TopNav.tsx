@@ -58,12 +58,12 @@ export default function TopNav() {
   return (
     <div className="sticky top-0 z-20 border-b border-line bg-carbon/80 backdrop-blur-md">
       <div className="mx-auto flex w-full max-w-[1120px] items-center justify-between gap-4 px-6 py-4">
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
           <Link href="/" className="flex items-center gap-2.5">
             <img src="/logo.png" alt="" className="h-7 w-7" />
             <span className="text-[19px] font-bold tracking-[-0.01em] text-fog">Safix</span>
           </Link>
-          <span className="text-[11px] tracking-[-0.02em] text-haze">{activeChain.name}</span>
+          <span className="hidden whitespace-nowrap text-[11px] tracking-[-0.02em] text-haze lg:block">{activeChain.name}</span>
         </div>
         <nav className="flex items-center gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {appLinks.map(link => {
