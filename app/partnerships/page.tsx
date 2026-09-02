@@ -27,7 +27,7 @@ function StatusPill({ status }: { status: number }) {
   const label = statusLabels[status] ?? "Unknown"
   return (
     <span
-      className={`rounded-full border px-3 py-1 text-[12px] tracking-[-0.01em] ${
+      className={`rounded-[3px] border px-3 py-1 text-[12px] tracking-[-0.01em] ${
         status === 1
           ? "border-mint text-mint"
           : status === 2
@@ -170,9 +170,9 @@ function LivePartnerships() {
                     {usd(row.funded, 0)} / {usd(row.goal, 0)}
                   </span>
                 </div>
-                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-line">
+                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-none bg-line">
                   <div
-                    className="h-full rounded-full bg-mint"
+                    className="h-full rounded-none bg-mint"
                     style={{ width: `${Math.min(100, (row.funded / row.goal) * 100)}%` }}
                   />
                 </div>
@@ -182,7 +182,7 @@ function LivePartnerships() {
                 <div className="flex gap-2.5">
                   <Field
                     inputMode="decimal"
-                    placeholder="USDC amount"
+                    placeholder="USDG amount"
                     value={amounts[row.id] ?? ""}
                     onChange={event => setAmounts(current => ({ ...current, [row.id]: event.target.value }))}
                   />
@@ -259,9 +259,9 @@ function DemoPartnerships() {
                   {usd(row.funded, 0)} / {usd(row.goal, 0)}
                 </span>
               </div>
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-line">
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-none bg-line">
                 <div
-                  className="h-full rounded-full bg-mint"
+                  className="h-full rounded-none bg-mint"
                   style={{ width: `${Math.min(100, (row.funded / row.goal) * 100)}%` }}
                 />
               </div>

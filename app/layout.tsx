@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     template: "%s · Safix app"
   },
   description:
-    "Borrow USDC against tokenized assets at zero interest, provide liquidity to the stability pool, and manage your private credit passport."
+    "Borrow USDG against tokenized assets at zero interest, provide liquidity to the stability pool, and manage your private credit passport."
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {

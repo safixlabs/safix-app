@@ -107,7 +107,7 @@ function LivePool() {
         <Stat
           label="Pool size"
           value={totalDeposits.data !== undefined ? usd(fromUsdcUnits(totalDeposits.data), 0) : "…"}
-          hint="USDC deposited by providers"
+          hint="USDG deposited by providers"
         />
         <Stat
           label="Your deposit"
@@ -120,21 +120,21 @@ function LivePool() {
           hint="Collateral received from liquidations"
         />
         <Stat
-          label="Your USDC"
+          label="Your USDG"
           value={address && usdcBalance.data !== undefined ? usd(fromUsdcUnits(usdcBalance.data)) : "–"}
           hint="Wallet balance"
         />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
-        <Panel title={mode === "deposit" ? "Deposit USDC" : "Withdraw USDC"}>
+        <Panel title={mode === "deposit" ? "Deposit USDG" : "Withdraw USDG"}>
           <div className="flex flex-col gap-4">
             <div className="flex gap-2">
               {(["deposit", "withdraw"] as const).map(candidate => (
                 <button
                   key={candidate}
                   onClick={() => setMode(candidate)}
-                  className={`rounded-full px-4 py-2 text-[13px] font-medium tracking-[-0.01em] transition-colors ${
+                  className={`rounded-[3px] px-4 py-2 text-[13px] font-medium tracking-[-0.01em] transition-colors ${
                     mode === candidate
                       ? "bg-mint text-carbon"
                       : "border border-line text-mist hover:text-fog"
@@ -156,22 +156,22 @@ function LivePool() {
                 : mode === "withdraw"
                   ? "Withdraw"
                   : needsApproval
-                    ? "Approve USDC"
+                    ? "Approve USDG"
                     : "Deposit"}
             </PrimaryButton>
             <button
               onClick={claim}
               disabled={busy || !address}
-              className="rounded-full border border-line px-5 py-2.5 text-[13px] font-medium tracking-[-0.01em] text-mist transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
+              className="rounded-[3px] border border-line px-5 py-2.5 text-[13px] font-medium tracking-[-0.01em] text-mist transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
             >
               Claim liquidation gains
             </button>
             <button
               onClick={mintTestUsdc}
               disabled={busy || !address}
-              className="rounded-full border border-line px-5 py-2 text-[12.5px] font-medium tracking-[-0.01em] text-haze transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
+              className="rounded-[3px] border border-line px-5 py-2 text-[12.5px] font-medium tracking-[-0.01em] text-haze transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
             >
-              Mint 10,000 test USDC
+              Mint 10,000 test USDG
             </button>
             <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">
               {error
@@ -212,14 +212,14 @@ function DemoPool() {
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Pool size" value={usd(poolStats.tvl, 0)} hint="USDC deposited by providers" />
+        <Stat label="Pool size" value={usd(poolStats.tvl, 0)} hint="USDG deposited by providers" />
         <Stat label="Your deposit" value={usd(poolStats.yourDeposit, 0)} hint={`${(poolStats.poolShare * 100).toFixed(2)}% of the pool`} />
         <Stat label="Liquidation gains" value={usd(poolStats.liquidationGains)} hint="Discounted collateral received" />
         <Stat label="Protocol rewards" value={usd(poolStats.rewards)} hint="Lifetime, claimable" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
-        <Panel title={mode === "deposit" ? "Deposit USDC" : "Withdraw USDC"}>
+        <Panel title={mode === "deposit" ? "Deposit USDG" : "Withdraw USDG"}>
           <div className="flex flex-col gap-4">
             <div className="flex gap-2">
               {(["deposit", "withdraw"] as const).map(candidate => (
@@ -229,7 +229,7 @@ function DemoPool() {
                     setMode(candidate)
                     setSubmitted(false)
                   }}
-                  className={`rounded-full px-4 py-2 text-[13px] font-medium tracking-[-0.01em] transition-colors ${
+                  className={`rounded-[3px] px-4 py-2 text-[13px] font-medium tracking-[-0.01em] transition-colors ${
                     mode === candidate
                       ? "bg-mint text-carbon"
                       : "border border-line text-mist hover:text-fog"

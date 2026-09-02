@@ -175,7 +175,7 @@ function LiveBorrow() {
             <li key={candidate.address}>
               <button
                 onClick={() => setAssetIndex(index)}
-                className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3.5 text-left transition-colors ${
+                className={`flex w-full items-center justify-between gap-3 rounded-[3px] border px-4 py-3.5 text-left transition-colors ${
                   index === assetIndex
                     ? "border-mint bg-carbon/60"
                     : "border-line bg-carbon/30 hover:border-haze"
@@ -213,7 +213,7 @@ function LiveBorrow() {
           <button
             onClick={mintTestAsset}
             disabled={busy || !address}
-            className="rounded-full border border-line px-5 py-2 text-[12.5px] font-medium tracking-[-0.01em] text-haze transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
+            className="rounded-[3px] border border-line px-5 py-2 text-[12.5px] font-medium tracking-[-0.01em] text-haze transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
           >
             Mint 10 test {asset?.symbol}
           </button>
@@ -223,7 +223,7 @@ function LiveBorrow() {
         </div>
       </Panel>
 
-      <Panel title="Draw USDC">
+      <Panel title="Draw USDG">
         <div className="flex flex-col gap-4">
           <Field
             inputMode="decimal"
@@ -256,7 +256,7 @@ function LiveBorrow() {
             onClick={draw}
             className="w-full"
           >
-            {overCapacity ? "Exceeds capacity" : busy ? "Confirming…" : "Draw USDC"}
+            {overCapacity ? "Exceeds capacity" : busy ? "Confirming…" : "Draw USDG"}
           </PrimaryButton>
 
           <div className="flex flex-col gap-3 border-t border-line pt-4">
@@ -274,7 +274,7 @@ function LiveBorrow() {
               <button
                 onClick={repay}
                 disabled={repayUnits === 0n || busy || !address}
-                className="shrink-0 rounded-2xl border border-line px-4 text-[13px] font-medium text-mist transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
+                className="shrink-0 rounded-[3px] border border-line px-4 text-[13px] font-medium text-mist transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
               >
                 {needsRepayApproval ? "Approve" : "Repay"}
               </button>
@@ -283,7 +283,7 @@ function LiveBorrow() {
               <button
                 onClick={closeOut}
                 disabled={busy || !address}
-                className="rounded-full border border-line px-5 py-2 text-[12.5px] font-medium tracking-[-0.01em] text-haze transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
+                className="rounded-[3px] border border-line px-5 py-2 text-[12.5px] font-medium tracking-[-0.01em] text-haze transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
               >
                 {needsCloseApproval
                   ? `Approve ${usd(fromUsdcUnits(closeOwed))} to close`
@@ -337,7 +337,7 @@ function DemoBorrow() {
                     setAssetId(candidate.id)
                     setDrawn(false)
                   }}
-                  className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3.5 text-left transition-colors ${
+                  className={`flex w-full items-center justify-between gap-3 rounded-[3px] border px-4 py-3.5 text-left transition-colors ${
                     selected
                       ? "border-mint bg-carbon/60"
                       : "border-line bg-carbon/30 hover:border-haze"
@@ -366,7 +366,7 @@ function DemoBorrow() {
         </ul>
       </Panel>
 
-      <Panel title="Draw USDC">
+      <Panel title="Draw USDG">
         <div className="flex flex-col gap-4">
           <div className="flex gap-2.5">
             <Field
@@ -383,7 +383,7 @@ function DemoBorrow() {
                 setAmount((capacity / (1 + originationFeeRate)).toFixed(2))
                 setDrawn(false)
               }}
-              className="shrink-0 rounded-2xl border border-line px-4 text-[13px] font-medium text-mist transition-colors hover:border-mint hover:text-mint"
+              className="shrink-0 rounded-[3px] border border-line px-4 text-[13px] font-medium text-mist transition-colors hover:border-mint hover:text-mint"
             >
               Max
             </button>
@@ -421,7 +421,7 @@ function DemoBorrow() {
             onClick={() => setDrawn(true)}
             className="w-full"
           >
-            {overCapacity ? "Exceeds capacity" : "Draw USDC"}
+            {overCapacity ? "Exceeds capacity" : "Draw USDG"}
           </PrimaryButton>
 
           <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">
@@ -440,7 +440,7 @@ export default function BorrowPage() {
     <div className="flex flex-col gap-8">
       <PageHeader
         title="Borrow"
-        lead="Lock a tokenized asset, draw USDC, pay one fee at the door. The debt you see at draw is the debt you repay."
+        lead="Lock a tokenized asset, draw USDG, pay one fee at the door. The debt you see at draw is the debt you repay."
         badge={isLive && liveAssets.length > 0 ? "Live onchain" : "Demo data"}
       />
       {isLive && liveAssets.length > 0 ? <LiveBorrow /> : <DemoBorrow />}
