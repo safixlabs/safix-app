@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import { useAccount, usePublicClient, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
 import { AmountField, ConfirmedLink, PageHeader, Panel, PrimaryButton } from "@/components/ui"
 import { usd } from "@/lib/demo"
+import { TxToast } from "@/components/TxToast"
+import { humanError } from "@/lib/errors"
 import { deskAbi, deskAddress, erc20Abi, fromUsdgUnits, usdgAddress, usdgUnits } from "@/lib/safix"
 
 const statusLabels = ["Funding", "Active", "Settled", "Cancelled"] as const
@@ -141,6 +143,13 @@ function LivePartnerships() {
 
   return (
     <div className="flex flex-col gap-4">
+      <TxToast
+        hash={txHash}
+        isPending={isPending}
+        isConfirming={receipt.isLoading && Boolean(txHash)}
+        isSuccess={receipt.isSuccess}
+        error={error}
+      />
       {rows.length === 0 ? (
         <Panel title="Open partnerships">
           <p className="py-2 text-[14px] tracking-[-0.01em] text-haze">
@@ -208,7 +217,7 @@ function LivePartnerships() {
         ))
       )}
       <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">
-        {error ? error.message.split("\n")[0] : receipt.isSuccess ? <ConfirmedLink hash={txHash} /> : ""}
+        {error ? humanError(error) : receipt.isSuccess ? <ConfirmedLink hash={txHash} /> : ""}
       </p>
     </div>
   )

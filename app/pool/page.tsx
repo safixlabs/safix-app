@@ -18,6 +18,8 @@ import {
   UsdgMark
 } from "@/components/ui"
 import { usd } from "@/lib/demo"
+import { TxToast } from "@/components/TxToast"
+import { humanError } from "@/lib/errors"
 import {
   erc20Abi,
   fromTokenUnits,
@@ -307,7 +309,7 @@ function LivePool() {
   }
 
   const status = error ? (
-    error.message.split("\n")[0]
+    humanError(error)
   ) : receipt.isSuccess ? (
     <ConfirmedLink hash={txHash} />
   ) : address ? (
@@ -318,6 +320,13 @@ function LivePool() {
 
   return (
     <>
+      <TxToast
+        hash={txHash}
+        isPending={isPending}
+        isConfirming={receipt.isLoading && Boolean(txHash)}
+        isSuccess={receipt.isSuccess}
+        error={error}
+      />
       <PoolStats poolSize={poolSize} available={available} yourDeposit={yourDeposit} connected={Boolean(address)} />
       <div className="grid items-start gap-4 lg:grid-cols-[1.05fr_1fr]">
         <LiquidityCard

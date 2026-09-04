@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react"
 import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
 import { AmountField, AssetMark, ConfirmedLink, Field, HealthBar, PageHeader, Panel, PrimaryButton, Usdg, UsdgMark } from "@/components/ui"
 import { collateralAssets, originationFeeRate, usd } from "@/lib/demo"
+import { TxToast } from "@/components/TxToast"
+import { humanError } from "@/lib/errors"
 import {
   erc20Abi,
   erc8056Abi,
@@ -169,6 +171,13 @@ function LiveBorrow() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
+      <TxToast
+        hash={txHash}
+        isPending={isPending}
+        isConfirming={receipt.isLoading && Boolean(txHash)}
+        isSuccess={receipt.isSuccess}
+        error={error}
+      />
       <Panel title="Collateral">
         <ul className="flex flex-col gap-2.5">
           {liveAssets.map((candidate, index) => (
@@ -297,7 +306,7 @@ function LiveBorrow() {
 
           <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">
             {error
-              ? error.message.split("\n")[0]
+              ? humanError(error)
               : receipt.isSuccess
                 ? <ConfirmedLink hash={txHash} />
                 : "No time-based cost. Repay whenever you choose."}
