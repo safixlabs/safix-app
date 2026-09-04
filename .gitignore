@@ -6,3 +6,5 @@ out/
 .env
 .env.*
 .vercel
+test-results/
+playwright-report/

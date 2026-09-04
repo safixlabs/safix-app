@@ -90,6 +90,7 @@ export function QuickAmounts({ onPick, disabled }: { onPick: (fraction: number) 
           key={fraction}
           onClick={() => onPick(fraction)}
           disabled={disabled}
+          aria-label={fraction === 1 ? "Use the maximum amount" : `Use ${fraction * 100} percent`}
           className="flex-1 rounded-[3px] border border-line py-1.5 text-[12px] tracking-[-0.01em] text-haze transition-colors hover:border-mint hover:text-mint disabled:opacity-40"
         >
           {fraction === 1 ? "Max" : `${fraction * 100}%`}
@@ -191,7 +192,7 @@ export function PrimaryButton(props: ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
       {...rest}
-      className={`rounded-[3px] bg-mint px-6 py-3 text-[14px] font-semibold tracking-[-0.01em] text-ink transition-colors hover:bg-mint-bright disabled:cursor-not-allowed disabled:bg-line disabled:text-haze ${className ?? ""}`}
+      className={`rounded-[3px] bg-mint px-6 py-3 text-[14px] font-semibold tracking-[-0.01em] text-ink transition-colors hover:bg-mint-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mint disabled:cursor-not-allowed disabled:bg-line disabled:text-haze ${className ?? ""}`}
     />
   )
 }
@@ -201,7 +202,7 @@ export function GhostButton(props: ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
       {...rest}
-      className={`rounded-[3px] border border-line px-5 py-2.5 text-[13px] font-medium tracking-[-0.01em] text-mist transition-colors hover:border-mint hover:text-mint ${className ?? ""}`}
+      className={`rounded-[3px] border border-line px-5 py-2.5 text-[13px] font-medium tracking-[-0.01em] text-mist transition-colors hover:border-mint hover:text-mint focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mint ${className ?? ""}`}
     />
   )
 }
@@ -211,7 +212,8 @@ export function Field(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...rest}
-      className={`w-full rounded-[3px] border border-line bg-carbon/60 px-4 py-3.5 text-[15px] tracking-[-0.01em] text-fog outline-none transition-colors [font-variant-numeric:tabular-nums] placeholder:text-haze focus:border-mint ${className ?? ""}`}
+      aria-label={rest["aria-label"] ?? rest.placeholder}
+      className={`w-full rounded-[3px] border border-line bg-carbon/60 px-4 py-3.5 text-[15px] tracking-[-0.01em] text-fog outline-none transition-colors [font-variant-numeric:tabular-nums] placeholder:text-haze focus:border-mint focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mint ${className ?? ""}`}
     />
   )
 }

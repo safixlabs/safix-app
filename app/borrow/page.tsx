@@ -262,6 +262,8 @@ function LiveBorrow() {
               {liveAssets.map((candidate, index) => (
                 <li key={candidate.address}>
                   <button
+                    aria-label={`Select ${candidate.symbol} as collateral`}
+                    aria-pressed={index === assetIndex}
                     onClick={() => setAssetIndex(index)}
                     className={`flex w-full items-center justify-between gap-3 rounded-[3px] border px-4 py-3.5 text-left transition-colors ${
                       index === assetIndex ? "border-mint bg-carbon/60" : "border-line bg-carbon/30 hover:border-haze"
@@ -479,6 +481,8 @@ function DemoBorrow() {
           {collateralAssets.map(candidate => (
             <li key={candidate.id}>
               <button
+                aria-label={`Select ${candidate.symbol} as collateral`}
+                aria-pressed={candidate.id === assetId}
                 onClick={() => {
                   setAssetId(candidate.id)
                   setAcceptedRisk(false)
