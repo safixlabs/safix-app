@@ -2,8 +2,10 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useState } from "react"
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi"
 import { activeChain } from "@/lib/chain"
+import RiskGate, { hasAcknowledgedRisk } from "./RiskGate"
 import ThemeToggle from "./ThemeToggle"
 import { appLinks, normalizePath } from "./nav"
 
@@ -14,19 +16,37 @@ function WalletButton() {
   const { connect, connectors, isPending } = useConnect()
   const { disconnect } = useDisconnect()
   const { switchChain, isPending: switching } = useSwitchChain()
+  const [gateOpen, setGateOpen] = useState(false)
 
   const injectedConnector = connectors[0]
   const wrongNetwork = isConnected && chainId !== activeChain.id
 
   if (!isConnected) {
     return (
+      <>
+        <RiskGate
+          open={gateOpen}
+          onAccept={() => {
+            setGateOpen(false)
+            if (injectedConnector) connect({ connector: injectedConnector })
+          }}
+          onDismiss={() => setGateOpen(false)}
+        />
       <button
-        onClick={() => injectedConnector && connect({ connector: injectedConnector })}
+        onClick={() => {
+          if (!injectedConnector) return
+          if (hasAcknowledgedRisk()) {
+            connect({ connector: injectedConnector })
+          } else {
+            setGateOpen(true)
+          }
+        }}
         disabled={!injectedConnector || isPending}
         className="hidden shrink-0 rounded-[3px] bg-mint px-4.5 py-2 text-[13px] font-semibold tracking-[-0.01em] text-ink transition-colors hover:bg-mint-bright disabled:bg-line disabled:text-haze sm:block"
       >
         {isPending ? "Connecting…" : injectedConnector ? "Connect wallet" : "No wallet detected"}
       </button>
+      </>
     )
   }
 

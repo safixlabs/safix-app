@@ -38,6 +38,7 @@ export const safixPoolAbi = [
   { type: "function", name: "gainOf", stateMutability: "view", inputs: [{ name: "provider", type: "address" }, { name: "asset", type: "address" }], outputs: [{ type: "uint256" }] },
   { type: "function", name: "positions", stateMutability: "view", inputs: [{ name: "borrower", type: "address" }, { name: "asset", type: "address" }], outputs: [{ name: "collateral", type: "uint256" }, { name: "debt", type: "uint256" }, { name: "totalDrawn", type: "uint256" }] },
   { type: "function", name: "assetConfig", stateMutability: "view", inputs: [{ name: "asset", type: "address" }], outputs: [{ name: "enabled", type: "bool" }, { name: "maxLtvBps", type: "uint16" }, { name: "liqThresholdBps", type: "uint16" }, { name: "priceUsd1e18", type: "uint256" }] },
+  { type: "function", name: "currentPrice", stateMutability: "view", inputs: [{ name: "asset", type: "address" }], outputs: [{ name: "price1e18", type: "uint256" }, { name: "updatedAt", type: "uint256" }] },
   { type: "function", name: "collateralValueStable", stateMutability: "view", inputs: [{ name: "asset", type: "address" }, { name: "amount", type: "uint256" }], outputs: [{ type: "uint256" }] },
   { type: "function", name: "isLiquidatable", stateMutability: "view", inputs: [{ name: "borrower", type: "address" }, { name: "asset", type: "address" }], outputs: [{ type: "bool" }] }
 ] as const

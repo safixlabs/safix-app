@@ -22,7 +22,7 @@ export const robinhoodTestnet = defineChain({
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
   rpcUrls: {
     default: {
-      http: [process.env.NEXT_PUBLIC_RPC_OVERRIDE ?? "https://rpc.testnet.chain.robinhood.com"],
+      http: ["https://rpc.testnet.chain.robinhood.com"],
       webSocket: ["wss://feed.testnet.chain.robinhood.com"]
     }
   },

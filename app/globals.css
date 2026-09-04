@@ -11,6 +11,8 @@
   --color-mist: var(--text-body);
   --color-haze: var(--text-muted);
   --color-line: var(--border-hairline);
+  --color-amber: var(--warning);
+  --color-danger: var(--critical);
   --font-sans: var(--font-sans-src), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
@@ -27,6 +29,8 @@
   --text-muted: #8ea09a;
   --border-hairline: #1d2b28;
   --backdrop-opacity: 0.6;
+  --warning: #f5c451;
+  --critical: #ff7a6b;
 }
 
 @media (prefers-color-scheme: light) {
@@ -43,6 +47,8 @@
     --text-muted: #5d746e;
     --border-hairline: #d9e6e2;
     --backdrop-opacity: 0.28;
+    --warning: #96650a;
+    --critical: #b03024;
   }
 }
 

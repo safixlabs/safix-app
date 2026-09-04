@@ -4,6 +4,7 @@ import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react
 import { useState } from "react"
 import { assetIconSrc, assetInitials } from "@/lib/assets"
 import { explorerTxUrl } from "@/lib/chain"
+import { healthStateCopy, healthStateOf, liquidationHealth } from "@/lib/risk"
 
 export function ConfirmedLink({ hash }: { hash?: `0x${string}` }) {
   const url = explorerTxUrl(hash)
@@ -215,12 +216,46 @@ export function Field(props: InputHTMLAttributes<HTMLInputElement>) {
   )
 }
 
-export function HealthBar({ ratio }: { ratio: number }) {
-  const width = Math.max(4, Math.min(100, (ratio / 2.5) * 100))
+export function HealthBadge({
+  health,
+  liqThresholdBps,
+  hasDebt
+}: {
+  health: number
+  liqThresholdBps: number
+  hasDebt: boolean
+}) {
+  const state = healthStateOf(health, liqThresholdBps, hasDebt)
+  const copy = healthStateCopy[state]
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] border border-line px-2.5 py-1 text-[12px] tracking-[-0.01em] ${copy.tone}`}
+      title={copy.blurb}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {copy.label}
+    </span>
+  )
+}
+
+export function HealthBar({
+  ratio,
+  liqThresholdBps = 9000,
+  hasDebt = true
+}: {
+  ratio: number
+  liqThresholdBps?: number
+  hasDebt?: boolean
+}) {
+  const floor = liquidationHealth(liqThresholdBps) || 1
+  const width = Math.max(4, Math.min(100, (ratio / (floor * 2)) * 100))
+  const state = healthStateOf(ratio, liqThresholdBps, hasDebt)
+  const fill = state === "liquidatable" ? "bg-danger" : state === "atRisk" ? "bg-amber" : "bg-mint"
   return (
     <div className="flex items-center gap-3">
-      <div className="h-1.5 w-full max-w-[140px] overflow-hidden rounded-none bg-line">
-        <div className="h-full rounded-none bg-mint" style={{ width: `${width}%` }} />
+      <div className="relative h-1.5 w-full max-w-[140px] overflow-hidden rounded-none bg-line">
+        <div className={`h-full rounded-none ${fill}`} style={{ width: `${width}%` }} />
+        <span className="absolute inset-y-0 w-px bg-haze" style={{ left: "50%" }} />
       </div>
       <span className="text-[13px] tracking-[-0.01em] text-mist [font-variant-numeric:tabular-nums]">
         {(ratio * 100).toFixed(0)}%

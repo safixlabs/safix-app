@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import Link from "next/link"
 import type { ReactNode } from "react"
 import { DM_Sans } from "next/font/google"
 import "./globals.css"
@@ -38,9 +39,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </Providers>
         <footer className="mx-auto flex w-full max-w-[1120px] items-baseline justify-between border-t border-line px-6 pb-8 pt-6 text-[12px] tracking-[-0.02em] text-haze">
           <span>Safix</span>
-          <a href="https://safix-docs.vercel.app" className="transition-colors hover:text-mint">
-            Documentation →
-          </a>
+          <nav className="flex items-center gap-5">
+            <Link href="/risk/" className="transition-colors hover:text-mint">
+              Risk
+            </Link>
+            <Link href="/terms/" className="transition-colors hover:text-mint">
+              Terms
+            </Link>
+            <a href="https://safix-docs.vercel.app" className="transition-colors hover:text-mint">
+              Documentation →
+            </a>
+          </nav>
         </footer>
       </body>
     </html>
