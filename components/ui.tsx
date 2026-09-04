@@ -71,7 +71,7 @@ export function Segmented<T extends string>({
           key={option.value}
           onClick={() => onChange(option.value)}
           className={`flex-1 rounded-[2px] px-4 py-2 text-[13px] font-medium tracking-[-0.01em] transition-colors ${
-            value === option.value ? "bg-mint text-carbon" : "text-mist hover:text-fog"
+            value === option.value ? "bg-mint text-ink" : "text-mist hover:text-fog"
           }`}
         >
           {option.label}
@@ -190,7 +190,7 @@ export function PrimaryButton(props: ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
       {...rest}
-      className={`rounded-[3px] bg-mint px-6 py-3 text-[14px] font-semibold tracking-[-0.01em] text-carbon transition-colors hover:bg-mint-bright disabled:cursor-not-allowed disabled:bg-line disabled:text-haze ${className ?? ""}`}
+      className={`rounded-[3px] bg-mint px-6 py-3 text-[14px] font-semibold tracking-[-0.01em] text-ink transition-colors hover:bg-mint-bright disabled:cursor-not-allowed disabled:bg-line disabled:text-haze ${className ?? ""}`}
     />
   )
 }

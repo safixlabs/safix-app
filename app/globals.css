@@ -1,19 +1,64 @@
 @import "tailwindcss";
 
-@theme {
-  --color-carbon: #070c0c;
-  --color-panel: #0d1615;
-  --color-teal-deep: #02252b;
-  --color-mint: #10e7c0;
-  --color-mint-bright: #6bf2da;
-  --color-fog: #e9f2ee;
-  --color-mist: #c0cdc8;
-  --color-haze: #8ea09a;
-  --color-line: #1d2b28;
+@theme inline {
+  --color-carbon: var(--surface-canvas);
+  --color-panel: var(--surface-panel);
+  --color-teal-deep: var(--surface-accent);
+  --color-mint: var(--accent);
+  --color-mint-bright: var(--accent-strong);
+  --color-ink: var(--on-accent);
+  --color-fog: var(--text-strong);
+  --color-mist: var(--text-body);
+  --color-haze: var(--text-muted);
+  --color-line: var(--border-hairline);
+  --font-sans: var(--font-sans-src), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
-@theme inline {
-  --font-sans: var(--font-sans-src), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+:root {
+  color-scheme: dark;
+  --surface-canvas: #070c0c;
+  --surface-panel: #0d1615;
+  --surface-accent: #02252b;
+  --accent: #10e7c0;
+  --accent-strong: #6bf2da;
+  --on-accent: #04100e;
+  --text-strong: #e9f2ee;
+  --text-body: #c0cdc8;
+  --text-muted: #8ea09a;
+  --border-hairline: #1d2b28;
+  --backdrop-opacity: 0.6;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --surface-canvas: #f4f8f7;
+    --surface-panel: #ffffff;
+    --surface-accent: #d8f4ec;
+    --accent: #077760;
+    --accent-strong: #05604e;
+    --on-accent: #ffffff;
+    --text-strong: #06201b;
+    --text-body: #3c534e;
+    --text-muted: #5d746e;
+    --border-hairline: #d9e6e2;
+    --backdrop-opacity: 0.28;
+  }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --surface-canvas: #f4f8f7;
+  --surface-panel: #ffffff;
+  --surface-accent: #d8f4ec;
+  --accent: #077760;
+  --accent-strong: #05604e;
+  --on-accent: #ffffff;
+  --text-strong: #06201b;
+  --text-body: #3c534e;
+  --text-muted: #5d746e;
+  --border-hairline: #d9e6e2;
+  --backdrop-opacity: 0.28;
 }
 
 @layer base {

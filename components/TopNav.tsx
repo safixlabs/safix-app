@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi"
 import { activeChain } from "@/lib/chain"
+import ThemeToggle from "./ThemeToggle"
 import { appLinks, normalizePath } from "./nav"
 
 const shortAddress = (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}`
@@ -22,7 +23,7 @@ function WalletButton() {
       <button
         onClick={() => injectedConnector && connect({ connector: injectedConnector })}
         disabled={!injectedConnector || isPending}
-        className="hidden shrink-0 rounded-[3px] bg-mint px-4.5 py-2 text-[13px] font-semibold tracking-[-0.01em] text-carbon transition-colors hover:bg-mint-bright disabled:bg-line disabled:text-haze sm:block"
+        className="hidden shrink-0 rounded-[3px] bg-mint px-4.5 py-2 text-[13px] font-semibold tracking-[-0.01em] text-ink transition-colors hover:bg-mint-bright disabled:bg-line disabled:text-haze sm:block"
       >
         {isPending ? "Connecting…" : injectedConnector ? "Connect wallet" : "No wallet detected"}
       </button>
@@ -34,7 +35,7 @@ function WalletButton() {
       <button
         onClick={() => switchChain({ chainId: activeChain.id })}
         disabled={switching}
-        className="hidden shrink-0 rounded-[3px] bg-mint px-4.5 py-2 text-[13px] font-semibold tracking-[-0.01em] text-carbon transition-colors hover:bg-mint-bright sm:block"
+        className="hidden shrink-0 rounded-[3px] bg-mint px-4.5 py-2 text-[13px] font-semibold tracking-[-0.01em] text-ink transition-colors hover:bg-mint-bright sm:block"
       >
         {switching ? "Switching…" : `Switch to ${activeChain.name}`}
       </button>
@@ -81,7 +82,10 @@ export default function TopNav() {
             )
           })}
         </nav>
-        <WalletButton />
+        <div className="flex shrink-0 items-center gap-2">
+          <ThemeToggle />
+          <WalletButton />
+        </div>
       </div>
     </div>
   )

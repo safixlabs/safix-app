@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
 const vertexShaderGLSL = `
 attribute vec2 position;
@@ -74,7 +74,7 @@ void main() {
   float glow = smoothstep(0.8, 0.0, dist) * 0.3;
   col += u_colors[1] * glow;
 
-  col = mix(col * 0.2, col, vignette);
+  col = mix(u_bg, col, vignette);
 
   float grain = fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453 + u_time);
   col += (grain - 0.5) * u_grain * 0.1;
@@ -83,10 +83,16 @@ void main() {
 }
 `
 
-const BG = "#070c0c"
-const COLORS = ["#04352e", "#0b8a71", "#10e7c0", "#02252b"]
+const PALETTES = {
+  dark: { bg: "#070c0c", colors: ["#04352e", "#0b8a71", "#10e7c0", "#02252b"] },
+  light: { bg: "#f4f8f7", colors: ["#e6f5f0", "#d2ece5", "#bfe7dc", "#f0f8f6"] }
+} as const
+
 const SPEED = 0.7
 const GRAIN = 0.25
+
+const currentTheme = () =>
+  document.documentElement.dataset.theme === "light" ? "light" : "dark"
 
 const hexToRgb = (hex: string): [number, number, number] => {
   const h = hex.replace("#", "")
@@ -99,6 +105,14 @@ const hexToRgb = (hex: string): [number, number, number] => {
 
 export default function Backdrop() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const [theme, setTheme] = useState<"dark" | "light">("dark")
+
+  useEffect(() => {
+    setTheme(currentTheme())
+    const observer = new MutationObserver(() => setTheme(currentTheme()))
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] })
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -141,9 +155,10 @@ export default function Backdrop() {
       bg: gl.getUniformLocation(program, "u_bg")
     }
 
+    const palette = PALETTES[theme]
     gl.uniform1f(locs.grain, GRAIN)
-    gl.uniform3f(locs.bg, ...hexToRgb(BG))
-    gl.uniform3fv(locs.colors, new Float32Array(COLORS.flatMap(hexToRgb)))
+    gl.uniform3f(locs.bg, ...hexToRgb(palette.bg))
+    gl.uniform3fv(locs.colors, new Float32Array(palette.colors.flatMap(hexToRgb)))
 
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio, 2)
@@ -178,13 +193,13 @@ export default function Backdrop() {
       window.removeEventListener("resize", resize)
       cancelAnimationFrame(raf)
     }
-  }, [])
+  }, [theme])
 
   return (
     <canvas
       ref={canvasRef}
       aria-hidden
-      className="pointer-events-none fixed inset-0 -z-10 h-full w-full opacity-60"
+      className="pointer-events-none fixed inset-0 -z-10 h-full w-full [opacity:var(--backdrop-opacity)]"
     />
   )
 }
