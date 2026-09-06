@@ -1,0 +1,15 @@
+{
+  "comment": "The deployment the money-path suite runs against. anvil forks this chain, so the contracts under test are the ones really deployed on it. Override any of these with the matching NEXT_PUBLIC_ variable, or E2E_FORK_URL, to point the suite at a different deployment.",
+  "forkUrl": "https://rpc.testnet.chain.robinhood.com",
+  "chainId": 31337,
+  "port": 8545,
+  "addresses": {
+    "pool": "0xe438a05823a8e5d15efd35760269076508bbff2e",
+    "usdg": "0x45eb873b11fb3e830130b84f261808b50766b22e",
+    "registry": "0x5e639adad1eff125f269458ed5d0f942d9be936c",
+    "desk": "0x3d239e1000e0f9fa644bb6f75ba7183695c1a510",
+    "tbill": "0xbd6a2741af888b104fe2655876d5d052e8442301",
+    "bnvda": "0xbc10209c538653b1d1f9ed0ccd2dc5debec45f8b",
+    "tgold": "0xad7d7ac848ac3e2d74c3eccb838cd0c2c1c2f201"
+  }
+}
