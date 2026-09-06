@@ -3,24 +3,44 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
-import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi"
+import { useQueryClient } from "@tanstack/react-query"
+import { useAccount, useConnect, useDisconnect } from "wagmi"
 import { track } from "@/lib/analytics"
 import { activeChain } from "@/lib/chain"
+import { clearWalletStorage } from "@/lib/wagmi"
+import { walletOptions } from "@/lib/wallets"
 import RiskGate, { hasAcknowledgedRisk } from "./RiskGate"
+import NetworkNotice from "./NetworkNotice"
 import ThemeToggle from "./ThemeToggle"
+import WalletDialog from "./WalletDialog"
 import { appLinks, normalizePath } from "./nav"
 
 const shortAddress = (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}`
 
-function WalletButton() {
-  const { address, chainId, isConnected } = useAccount()
-  const { connect, connectors, isPending } = useConnect()
-  const { disconnect } = useDisconnect()
-  const { switchChain, isPending: switching } = useSwitchChain()
-  const [gateOpen, setGateOpen] = useState(false)
+const actionClass =
+  "shrink-0 rounded-[3px] bg-mint px-3.5 py-2 text-[12.5px] font-semibold tracking-[-0.01em] text-ink transition-colors hover:bg-mint-bright disabled:bg-line disabled:text-haze sm:px-4.5 sm:text-[13px]"
 
-  const injectedConnector = connectors[0]
-  const wrongNetwork = isConnected && chainId !== activeChain.id
+function WalletButton() {
+  const { address, isConnected } = useAccount()
+  const { connectors } = useConnect()
+  const { disconnectAsync } = useDisconnect()
+  const queryClient = useQueryClient()
+  const [gateOpen, setGateOpen] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  const anyWallet = walletOptions(connectors).length > 0
+
+  const disconnect = async () => {
+    try {
+      await disconnectAsync()
+    } catch {
+      // A connector that cannot be asked politely is dropped anyway: the state
+      // below is what this app shows, and it must not outlive the account.
+    }
+    // The account is gone; so is every number that was read for it.
+    queryClient.removeQueries()
+    clearWalletStorage()
+  }
 
   if (!isConnected) {
     return (
@@ -30,55 +50,34 @@ function WalletButton() {
           onAccept={() => {
             setGateOpen(false)
             track("risk_acknowledged")
-            if (injectedConnector) {
-              track("connect_opened")
-              connect(
-                { connector: injectedConnector },
-                { onSuccess: () => track("connect_succeeded"), onError: () => track("connect_failed") }
-              )
-            }
+            track("connect_opened")
+            setPickerOpen(true)
           }}
           onDismiss={() => setGateOpen(false)}
         />
-      <button
-        onClick={() => {
-          if (!injectedConnector) return
-          if (hasAcknowledgedRisk()) {
-            track("connect_opened")
-            connect(
-              { connector: injectedConnector },
-              { onSuccess: () => track("connect_succeeded"), onError: () => track("connect_failed") }
-            )
-          } else {
-            setGateOpen(true)
-          }
-        }}
-        disabled={!injectedConnector || isPending}
-        className="hidden shrink-0 rounded-[3px] bg-mint px-4.5 py-2 text-[13px] font-semibold tracking-[-0.01em] text-ink transition-colors hover:bg-mint-bright disabled:bg-line disabled:text-haze sm:block"
-      >
-        {isPending ? "Connecting…" : injectedConnector ? "Connect wallet" : "No wallet detected"}
-      </button>
+        <WalletDialog open={pickerOpen} onClose={() => setPickerOpen(false)} />
+        <button
+          onClick={() => {
+            if (hasAcknowledgedRisk()) {
+              track("connect_opened")
+              setPickerOpen(true)
+            } else {
+              setGateOpen(true)
+            }
+          }}
+          className={actionClass}
+        >
+          {anyWallet ? "Connect wallet" : "Connect"}
+        </button>
       </>
-    )
-  }
-
-  if (wrongNetwork) {
-    return (
-      <button
-        onClick={() => switchChain({ chainId: activeChain.id })}
-        disabled={switching}
-        className="hidden shrink-0 rounded-[3px] bg-mint px-4.5 py-2 text-[13px] font-semibold tracking-[-0.01em] text-ink transition-colors hover:bg-mint-bright sm:block"
-      >
-        {switching ? "Switching…" : `Switch to ${activeChain.name}`}
-      </button>
     )
   }
 
   return (
     <button
-      onClick={() => disconnect()}
+      onClick={disconnect}
       title="Disconnect"
-      className="hidden shrink-0 rounded-[3px] border border-line px-4.5 py-2 text-[13px] font-medium tracking-[-0.01em] text-mist transition-colors hover:border-mint hover:text-mint sm:block"
+      className="shrink-0 rounded-[3px] border border-line px-3.5 py-2 text-[12.5px] font-medium tracking-[-0.01em] text-mist transition-colors hover:border-mint hover:text-mint sm:px-4.5 sm:text-[13px]"
     >
       {address ? shortAddress(address) : "Connected"}
     </button>
@@ -119,6 +118,7 @@ export default function TopNav() {
           <WalletButton />
         </div>
       </div>
+      <NetworkNotice />
     </div>
   )
 }

@@ -18,6 +18,7 @@ import {
   UsdgMark
 } from "@/components/ui"
 import { track, type AnalyticsEvent } from "@/lib/analytics"
+import { activeChain } from "@/lib/chain"
 import { usd } from "@/lib/demo"
 import { TxToast } from "@/components/TxToast"
 import { humanError } from "@/lib/errors"
@@ -229,22 +230,26 @@ function LivePool() {
   const [mode, setMode] = useState<Mode>("deposit")
   const [amount, setAmount] = useState("")
 
+  // Every read below is pinned to the chain Safix runs on. The wallet's chain
+  // decides what it can sign, never which contracts get read: a wallet sitting
+  // on another network must still see the real pool, not an empty one.
   const totals = useReadContracts({
     contracts: [
-      { abi: safixPoolAbi, address: poolAddress, functionName: "totalDeposits" },
-      { abi: safixPoolAbi, address: poolAddress, functionName: "availableLiquidity" }
+      { chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "totalDeposits" },
+      { chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "availableLiquidity" }
     ]
   })
   const personal = useReadContracts({
     contracts: [
-      { abi: safixPoolAbi, address: poolAddress, functionName: "compoundedDepositOf", args: address ? [address] : undefined },
-      { abi: erc20Abi, address: usdgAddress, functionName: "balanceOf", args: address ? [address] : undefined },
-      { abi: erc20Abi, address: usdgAddress, functionName: "allowance", args: address && poolAddress ? [address, poolAddress] : undefined }
+      { chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "compoundedDepositOf", args: address ? [address] : undefined },
+      { chainId: activeChain.id, abi: erc20Abi, address: usdgAddress, functionName: "balanceOf", args: address ? [address] : undefined },
+      { chainId: activeChain.id, abi: erc20Abi, address: usdgAddress, functionName: "allowance", args: address && poolAddress ? [address, poolAddress] : undefined }
     ],
     query: { enabled: Boolean(address) }
   })
   const gains = useReadContracts({
     contracts: liveAssets.map(asset => ({
+      chainId: activeChain.id,
       abi: safixPoolAbi,
       address: poolAddress,
       functionName: "gainOf" as const,
@@ -289,22 +294,23 @@ function LivePool() {
     if (!poolAddress || !usdgAddress || units === 0n) return
     if (mode === "deposit") {
       if (needsApproval) {
-        writeContract({ abi: erc20Abi, address: usdgAddress, functionName: "approve", args: [poolAddress, units] })
+        writeContract({ chainId: activeChain.id, abi: erc20Abi, address: usdgAddress, functionName: "approve", args: [poolAddress, units] })
       } else {
         track("deposit_started")
         pendingStep.current = "deposit_signed"
-        writeContract({ abi: safixPoolAbi, address: poolAddress, functionName: "deposit", args: [units] })
+        writeContract({ chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "deposit", args: [units] })
       }
     } else {
       track("withdraw_started")
       pendingStep.current = "withdraw_signed"
-      writeContract({ abi: safixPoolAbi, address: poolAddress, functionName: "withdraw", args: [units] })
+      writeContract({ chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "withdraw", args: [units] })
     }
   }
 
   const claim = () => {
     if (!poolAddress || liveAssets.length === 0) return
     writeContract({
+      chainId: activeChain.id,
       abi: safixPoolAbi,
       address: poolAddress,
       functionName: "claimGains",
@@ -314,7 +320,7 @@ function LivePool() {
 
   const mintTestUsdg = () => {
     if (!usdgAddress || !address) return
-    writeContract({ abi: erc20Abi, address: usdgAddress, functionName: "mint", args: [address, 10_000n * 10n ** 6n] })
+    writeContract({ chainId: activeChain.id, abi: erc20Abi, address: usdgAddress, functionName: "mint", args: [address, 10_000n * 10n ** 6n] })
   }
 
   const status = error ? (

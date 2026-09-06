@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react"
 import { useAccount, usePublicClient } from "wagmi"
 import { reportError } from "@/lib/monitoring"
 import { AssetMark, HealthBadge, HealthBar, PageHeader, Panel, Stat, UsdgMark } from "@/components/ui"
+import { activeChain } from "@/lib/chain"
 import { demoPositions, maxLtvFor, passport, usd } from "@/lib/demo"
 import { reportReadFailure, reportReadSuccess } from "@/lib/health"
 import { useVisibleInterval } from "@/lib/polling"
@@ -89,7 +90,11 @@ function PositionLine({ row }: { row: PositionRow }) {
 
 function LiveDashboard() {
   const { address } = useAccount()
-  const client = usePublicClient()
+  // Reads are pinned to the chain Safix runs on, not to whatever chain the
+  // wallet happens to sit on. The wallet's chain matters for signing; it must
+  // never decide which contracts get read, or a wallet on another network sees
+  // an empty pool instead of the real one.
+  const client = usePublicClient({ chainId: activeChain.id })
   // The periodic refresh runs only while the tab is on screen; see
   // useVisibleInterval. `load` is held in a ref so the interval survives the
   // effect being torn down and rebuilt on every account change.
@@ -101,6 +106,12 @@ function LiveDashboard() {
 
   useEffect(() => {
     let cancelled = false
+    // These reads belong to whoever was connected a moment ago. Drop them before
+    // the new ones are in flight, so an account switch never leaves the previous
+    // account's positions on screen for the length of a round trip.
+    setRows([])
+    setDeposit(0)
+    setLoaded(false)
     const load = async () => {
       const pool = poolAddress
       if (!client || !address || !pool) {

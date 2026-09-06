@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useAccount, usePublicClient, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
 import { AmountField, ConfirmedLink, PageHeader, Panel, PrimaryButton } from "@/components/ui"
+import { activeChain } from "@/lib/chain"
 import { usd } from "@/lib/demo"
 import { reportReadFailure, reportReadSuccess } from "@/lib/health"
 import { useVisibleInterval } from "@/lib/polling"
@@ -47,7 +48,11 @@ function StatusPill({ status }: { status: number }) {
 
 function LivePartnerships() {
   const { address } = useAccount()
-  const client = usePublicClient()
+  // Reads are pinned to the chain Safix runs on, not to whatever chain the
+  // wallet happens to sit on. The wallet's chain matters for signing; it must
+  // never decide which contracts get read, or a wallet on another network sees
+  // an empty pool instead of the real one.
+  const client = usePublicClient({ chainId: activeChain.id })
   // The periodic refresh runs only while the tab is on screen; see
   // useVisibleInterval. `load` is held in a ref so the interval survives the
   // effect being torn down and rebuilt on every account change.
@@ -60,6 +65,13 @@ function LivePartnerships() {
   const { writeContract, data: txHash, isPending, error } = useWriteContract()
   const receipt = useWaitForTransactionReceipt({ hash: txHash })
   const busy = isPending || (Boolean(txHash) && receipt.isLoading)
+
+  // `payout` and `contribution` are read for one account. The rest of a row is
+  // public, so only the account-specific figures are dropped on a switch: the
+  // list stays put while the new wallet's numbers are fetched.
+  useEffect(() => {
+    setRows(current => current.map(row => ({ ...row, payout: 0, contribution: 0 })))
+  }, [address])
 
   useEffect(() => {
     let cancelled = false
@@ -151,15 +163,15 @@ function LivePartnerships() {
       args: [address, desk]
     })
     if (allowance < units) {
-      writeContract({ abi: erc20Abi, address: usdg, functionName: "approve", args: [desk, units] })
+      writeContract({ chainId: activeChain.id, abi: erc20Abi, address: usdg, functionName: "approve", args: [desk, units] })
     } else {
-      writeContract({ abi: deskAbi, address: desk, functionName: "fund", args: [BigInt(row.id), units] })
+      writeContract({ chainId: activeChain.id, abi: deskAbi, address: desk, functionName: "fund", args: [BigInt(row.id), units] })
     }
   }
 
   const claim = (row: PartnershipRow) => {
     if (!deskAddress) return
-    writeContract({ abi: deskAbi, address: deskAddress, functionName: "claim", args: [BigInt(row.id)] })
+    writeContract({ chainId: activeChain.id, abi: deskAbi, address: deskAddress, functionName: "claim", args: [BigInt(row.id)] })
   }
 
   return (

@@ -19,6 +19,7 @@ import {
   UsdgMark
 } from "@/components/ui"
 import { track, type AnalyticsEvent } from "@/lib/analytics"
+import { activeChain } from "@/lib/chain"
 import { collateralAssets, originationFeeRate, redemptionFeeRate, usd } from "@/lib/demo"
 import { humanError } from "@/lib/errors"
 import { dropToLiquidation, healthStateOf, liquidationPrice1e18, priceToNumber } from "@/lib/risk"
@@ -98,27 +99,28 @@ function LiveBorrow() {
 
   const poolReads = useReadContracts({
     contracts: [
-      { abi: safixPoolAbi, address: poolAddress, functionName: "assetConfig", args: asset ? [asset.address] : undefined },
-      { abi: safixPoolAbi, address: poolAddress, functionName: "currentPrice", args: asset ? [asset.address] : undefined },
-      { abi: safixPoolAbi, address: poolAddress, functionName: "availableLiquidity" },
-      { abi: safixPoolAbi, address: poolAddress, functionName: "originationFeeBps" },
-      { abi: safixPoolAbi, address: poolAddress, functionName: "redemptionFeeBps" }
+      { chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "assetConfig", args: asset ? [asset.address] : undefined },
+      { chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "currentPrice", args: asset ? [asset.address] : undefined },
+      { chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "availableLiquidity" },
+      { chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "originationFeeBps" },
+      { chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "redemptionFeeBps" }
     ],
     query: { enabled: Boolean(asset) }
   })
 
   const walletReads = useReadContracts({
     contracts: [
-      { abi: safixPoolAbi, address: poolAddress, functionName: "positions", args: address && asset ? [address, asset.address] : undefined },
-      { abi: erc20Abi, address: asset?.address, functionName: "balanceOf", args: address ? [address] : undefined },
-      { abi: erc20Abi, address: asset?.address, functionName: "allowance", args: address && poolAddress ? [address, poolAddress] : undefined },
-      { abi: erc20Abi, address: usdgAddress, functionName: "allowance", args: address && poolAddress ? [address, poolAddress] : undefined },
-      { abi: erc20Abi, address: usdgAddress, functionName: "balanceOf", args: address ? [address] : undefined }
+      { chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "positions", args: address && asset ? [address, asset.address] : undefined },
+      { chainId: activeChain.id, abi: erc20Abi, address: asset?.address, functionName: "balanceOf", args: address ? [address] : undefined },
+      { chainId: activeChain.id, abi: erc20Abi, address: asset?.address, functionName: "allowance", args: address && poolAddress ? [address, poolAddress] : undefined },
+      { chainId: activeChain.id, abi: erc20Abi, address: usdgAddress, functionName: "allowance", args: address && poolAddress ? [address, poolAddress] : undefined },
+      { chainId: activeChain.id, abi: erc20Abi, address: usdgAddress, functionName: "balanceOf", args: address ? [address] : undefined }
     ],
     query: { enabled: Boolean(address && asset) }
   })
 
   const uiMultiplier = useReadContract({
+    chainId: activeChain.id,
     abi: erc8056Abi,
     address: asset?.address,
     functionName: "uiMultiplier",
@@ -216,11 +218,11 @@ function LiveBorrow() {
   const lock = () => {
     if (!asset || !poolAddress || lockUnits === 0n) return
     if (needsLockApproval) {
-      writeContract({ abi: erc20Abi, address: asset.address, functionName: "approve", args: [poolAddress, lockUnits] })
+      writeContract({ chainId: activeChain.id, abi: erc20Abi, address: asset.address, functionName: "approve", args: [poolAddress, lockUnits] })
     } else {
       track("lock_started", { asset: asset.symbol })
       pendingStep.current = "lock_signed"
-      writeContract({ abi: safixPoolAbi, address: poolAddress, functionName: "lockCollateral", args: [asset.address, lockUnits] })
+      writeContract({ chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "lockCollateral", args: [asset.address, lockUnits] })
     }
   }
 
@@ -236,32 +238,32 @@ function LiveBorrow() {
     }
     track("draw_started", { asset: asset.symbol })
     pendingStep.current = "draw_signed"
-    writeContract({ abi: safixPoolAbi, address: poolAddress, functionName: "draw", args: [asset.address, drawUnits] })
+    writeContract({ chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "draw", args: [asset.address, drawUnits] })
   }
 
   const repay = () => {
     if (!asset || !poolAddress || !usdgAddress || repayUnits === 0n) return
     if (needsRepayApproval) {
-      writeContract({ abi: erc20Abi, address: usdgAddress, functionName: "approve", args: [poolAddress, repayUnits] })
+      writeContract({ chainId: activeChain.id, abi: erc20Abi, address: usdgAddress, functionName: "approve", args: [poolAddress, repayUnits] })
     } else {
       pendingStep.current = "repay_signed"
-      writeContract({ abi: safixPoolAbi, address: poolAddress, functionName: "repay", args: [asset.address, repayUnits] })
+      writeContract({ chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "repay", args: [asset.address, repayUnits] })
     }
   }
 
   const closeOut = () => {
     if (!asset || !poolAddress || !usdgAddress || !hasPosition) return
     if (needsCloseApproval) {
-      writeContract({ abi: erc20Abi, address: usdgAddress, functionName: "approve", args: [poolAddress, closeOwed] })
+      writeContract({ chainId: activeChain.id, abi: erc20Abi, address: usdgAddress, functionName: "approve", args: [poolAddress, closeOwed] })
     } else {
       pendingStep.current = "close_signed"
-      writeContract({ abi: safixPoolAbi, address: poolAddress, functionName: "closePosition", args: [asset.address] })
+      writeContract({ chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "closePosition", args: [asset.address] })
     }
   }
 
   const mintTestAsset = () => {
     if (!asset || !address) return
-    writeContract({ abi: erc20Abi, address: asset.address, functionName: "mint", args: [address, 10n * 10n ** 18n] })
+    writeContract({ chainId: activeChain.id, abi: erc20Abi, address: asset.address, functionName: "mint", args: [address, 10n * 10n ** 18n] })
   }
 
   const drawBlockedReason = overCapacity

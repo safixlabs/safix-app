@@ -7,7 +7,14 @@ type Health = {
   lastGood: number
 }
 
-let state: Health = { failing: false, lastGood: 0 }
+/**
+ * Also the server's answer, and the same object every time it is asked for.
+ * useSyncExternalStore compares snapshots by identity, so a fresh object per
+ * call is an infinite render loop rather than a fresh reading.
+ */
+const initialState: Health = { failing: false, lastGood: 0 }
+
+let state: Health = initialState
 const listeners = new Set<() => void>()
 
 const publish = (next: Health) => {
@@ -33,7 +40,7 @@ const subscribe = (listener: () => void) => {
 }
 
 const snapshot = () => state
-const serverSnapshot = (): Health => ({ failing: false, lastGood: 0 })
+const serverSnapshot = () => initialState
 
 /**
  * Whether the chain is answering.

@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { WagmiProvider } from "wagmi"
 import { STALE_MS } from "@/lib/polling"
 import { wagmiConfig } from "@/lib/wagmi"
+import WalletSync from "@/components/WalletSync"
 
 export default function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -34,7 +35,10 @@ export default function Providers({ children }: { children: ReactNode }) {
 
   return (
     <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <WalletSync />
+        {children}
+      </QueryClientProvider>
     </WagmiProvider>
   )
 }

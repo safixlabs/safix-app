@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useAccount, useReadContract } from "wagmi"
 import { Check, PageHeader, Panel, PrimaryButton, Stat } from "@/components/ui"
+import { activeChain } from "@/lib/chain"
 import { passport } from "@/lib/demo"
 import { registryAbi, registryAddress } from "@/lib/safix"
 
@@ -16,7 +17,9 @@ function PendingMark() {
 
 function LivePassport() {
   const { address } = useAccount()
+  // Pinned to the chain Safix runs on; see the note in app/pool/page.tsx.
   const record = useReadContract({
+    chainId: activeChain.id,
     abi: registryAbi,
     address: registryAddress,
     functionName: "checkMaskOf",
@@ -24,6 +27,7 @@ function LivePassport() {
     query: { enabled: Boolean(address) }
   })
   const eligible = useReadContract({
+    chainId: activeChain.id,
     abi: registryAbi,
     address: registryAddress,
     functionName: "isEligible",
