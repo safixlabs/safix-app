@@ -61,7 +61,7 @@ test.describe("interface", () => {
   test("borrow preview reacts to the amount and warns near liquidation", async ({ page }) => {
     await page.goto("/borrow/")
     const amount = page.getByPlaceholder("0.00").first()
-    await clickWhenLive(page, page.getByRole("button", { name: "Use the maximum amount" }), async () => {
+    await clickWhenLive(page, page.getByRole("button", { name: "Use the maximum USDG to draw" }), async () => {
       await expect(amount).not.toHaveValue("", { timeout: 3_000 })
     })
 
@@ -73,7 +73,7 @@ test.describe("interface", () => {
   test("pool preview updates the resulting deposit and share", async ({ page }) => {
     await page.goto("/pool/")
     const amount = page.getByPlaceholder("0.00").first()
-    await clickWhenLive(page, page.getByRole("button", { name: "Use 50 percent" }), async () => {
+    await clickWhenLive(page, page.getByRole("button", { name: "Use 50 percent of USDG to deposit" }), async () => {
       await expect(amount).not.toHaveValue("", { timeout: 3_000 })
     })
     await expect(page.getByText("Your deposit after")).toBeVisible()

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useAccount, useConnect, useDisconnect } from "wagmi"
 import { track } from "@/lib/analytics"
@@ -76,8 +76,8 @@ function WalletButton() {
   return (
     <button
       onClick={disconnect}
-      title="Disconnect"
-      className="shrink-0 rounded-[3px] border border-line px-3.5 py-2 text-[12.5px] font-medium tracking-[-0.01em] text-mist transition-colors hover:border-mint hover:text-mint sm:px-4.5 sm:text-[13px]"
+      aria-label={address ? `Disconnect ${shortAddress(address)}` : "Disconnect wallet"}
+      className="shrink-0 rounded-[3px] border border-control px-4 py-2 text-[13px] font-medium tracking-[-0.01em] text-mist transition-colors hover:border-mint hover:text-mint sm:px-4.5"
     >
       {address ? shortAddress(address) : "Connected"}
     </button>
@@ -86,25 +86,49 @@ function WalletButton() {
 
 export default function TopNav() {
   const pathname = normalizePath(usePathname())
+  const activeLink = useRef<HTMLAnchorElement | null>(null)
+  const navRef = useRef<HTMLElement | null>(null)
+
+  // The links scroll sideways on a phone, so the current screen is pulled into view
+  // instead of sitting off the right edge. The scroll offset is set directly because
+  // scrollIntoView would also move the point Tab starts from, away from the top of
+  // the page.
+  useEffect(() => {
+    const link = activeLink.current
+    const strip = navRef.current
+    if (!link || !strip) return
+    const pastRight = link.offsetLeft + link.offsetWidth - (strip.scrollLeft + strip.clientWidth)
+    const pastLeft = strip.scrollLeft - link.offsetLeft
+    if (pastRight > 0) strip.scrollLeft += pastRight + 8
+    else if (pastLeft > 0) strip.scrollLeft -= pastLeft + 8
+  }, [pathname])
 
   return (
     <div className="sticky top-0 z-20 border-b border-line bg-carbon/80 backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-[1120px] items-center justify-between gap-4 px-6 py-4">
-        <div className="flex shrink-0 items-center gap-3">
+      {/* Below md the links wrap onto their own row, so the wallet button stays reachable
+          on a phone instead of being hidden. */}
+      <div className="mx-auto flex w-full max-w-[1120px] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-6 py-3 md:py-4">
+        <div className="order-1 flex shrink-0 items-center gap-3">
           <Link href="/" className="flex items-center gap-2.5">
             <img src="/logo.png" alt="" className="h-7 w-7" />
             <span className="text-[19px] font-bold tracking-[-0.01em] text-fog">Safix</span>
           </Link>
           <span className="hidden whitespace-nowrap text-[11px] tracking-[-0.02em] text-haze lg:block">{activeChain.name}</span>
         </div>
-        <nav className="flex items-center gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <nav
+          ref={navRef}
+          aria-label="Main"
+          className="order-3 -mx-1 flex w-full items-center gap-1 overflow-x-auto px-1 py-0.5 [-ms-overflow-style:none] [scrollbar-width:none] md:order-2 md:mx-0 md:w-auto md:px-0 [&::-webkit-scrollbar]:hidden"
+        >
           {appLinks.map(link => {
             const active = normalizePath(link.href) === pathname
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`whitespace-nowrap rounded-[3px] px-3.5 py-1.5 text-[13.5px] tracking-[-0.01em] transition-colors ${
+                ref={active ? activeLink : undefined}
+                aria-current={active ? "page" : undefined}
+                className={`whitespace-nowrap rounded-[3px] px-3 py-1.5 text-[13.5px] tracking-[-0.01em] transition-colors sm:px-3.5 ${
                   active ? "bg-panel text-mint" : "text-mist hover:text-fog"
                 }`}
               >
@@ -113,7 +137,7 @@ export default function TopNav() {
             )
           })}
         </nav>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="order-2 flex shrink-0 items-center gap-2 md:order-3">
           <ThemeToggle />
           <WalletButton />
         </div>

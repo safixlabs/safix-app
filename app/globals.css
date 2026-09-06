@@ -11,11 +11,15 @@
   --color-mist: var(--text-body);
   --color-haze: var(--text-muted);
   --color-line: var(--border-hairline);
+  --color-control: var(--border-control);
   --color-amber: var(--warning);
   --color-danger: var(--critical);
   --font-sans: var(--font-sans-src), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
+/* Every colour pair below is measured by scripts/contrast.mjs, which composites the
+   translucent surfaces over the brightest frame the backdrop can paint behind them.
+   Run `npm run contrast` after touching any of these. */
 :root {
   color-scheme: dark;
   --surface-canvas: #070c0c;
@@ -28,11 +32,14 @@
   --text-body: #c0cdc8;
   --text-muted: #8ea09a;
   --border-hairline: #1d2b28;
-  --backdrop-opacity: 0.6;
+  --border-control: #728680;
+  --backdrop-opacity: 0.2;
   --warning: #f5c451;
   --critical: #ff7a6b;
 }
 
+/* The light palette is repeated for the toggle and for the system preference; the two
+   lists must stay identical, which scripts/contrast.mjs asserts. */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     color-scheme: light;
@@ -44,8 +51,9 @@
     --on-accent: #ffffff;
     --text-strong: #06201b;
     --text-body: #3c534e;
-    --text-muted: #5d746e;
+    --text-muted: #526960;
     --border-hairline: #d9e6e2;
+    --border-control: #6d847d;
     --backdrop-opacity: 0.28;
     --warning: #96650a;
     --critical: #b03024;
@@ -62,18 +70,31 @@
   --on-accent: #ffffff;
   --text-strong: #06201b;
   --text-body: #3c534e;
-  --text-muted: #5d746e;
+  --text-muted: #526960;
   --border-hairline: #d9e6e2;
+  --border-control: #6d847d;
   --backdrop-opacity: 0.28;
+  --warning: #96650a;
+  --critical: #b03024;
 }
 
 @layer base {
   body {
     @apply bg-carbon font-sans text-fog antialiased;
+    /* Money and token amounts sit in columns everywhere; lining figures keep them aligned
+       and stop digits from shifting as values update. */
+    font-variant-numeric: tabular-nums;
   }
 
   ::selection {
     @apply bg-mint/25;
+  }
+
+  /* A visible focus ring on anything focusable, so a keyboard user is never lost. Zero
+     specificity, so a component can still place its own ring. */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 }
 

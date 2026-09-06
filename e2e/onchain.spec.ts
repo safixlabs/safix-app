@@ -37,7 +37,16 @@ const settles = async (read: () => Promise<bigint>, from: bigint) => {
 
 type Page = import("@playwright/test").Page
 
-const panelOf = (page: Page, title: string) => page.locator("section").filter({ hasText: title })
+/**
+ * A panel, by its own heading.
+ *
+ * Matching on the section's text instead picks up every panel that merely
+ * mentions the word: "Collateral" appears inside the draw panel's breakdown, so
+ * a text match returns two sections and the action below resolves to the wrong
+ * button.
+ */
+const panelOf = (page: Page, title: string) =>
+  page.locator("section").filter({ has: page.getByRole("heading", { name: title, exact: true }) })
 
 /** The full-width action button at the foot of a panel. */
 const actionOf = (page: Page, panel: string) => panelOf(page, panel).locator("button.w-full").last()
@@ -261,7 +270,11 @@ test.describe.serial("money paths", () => {
     await page.goto("/pool/")
     await connect(page)
     await page.getByRole("button", { name: /Mint 10,000 test/ }).click()
-    await expect(page.getByText("Request cancelled")).toBeVisible({ timeout: 20_000 })
-    await expect(page.getByText("You cancelled the request in your wallet.").first()).toBeVisible()
+    // Twice over, deliberately: once where it can be seen, once where it is
+    // announced. Naming both is what keeps the live region from being dropped.
+    const status = page.getByTestId("tx-status")
+    await expect(status.getByText("Request cancelled")).toBeVisible({ timeout: 20_000 })
+    await expect(status.getByText("You cancelled the request in your wallet.")).toBeVisible()
+    await expect(page.locator('[role="status"][aria-live="polite"]')).toContainText("Request cancelled")
   })
 })

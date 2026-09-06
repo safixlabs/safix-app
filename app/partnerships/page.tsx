@@ -201,18 +201,25 @@ function LivePartnerships() {
                   </span>
                 </div>
                 <span className="text-[13px] tracking-[-0.01em] text-haze">
-                  Returned {usd(row.returned, 0)}
+                  Returned {usd(row.returned)}
                 </span>
               </div>
 
               <div>
                 <div className="flex items-baseline justify-between text-[13px] tracking-[-0.01em]">
                   <span className="text-haze">Funded</span>
-                  <span className="text-mist [font-variant-numeric:tabular-nums]">
-                    {usd(row.funded, 0)} / {usd(row.goal, 0)}
+                  <span className="text-mist">
+                    {usd(row.funded)} / {usd(row.goal)}
                   </span>
                 </div>
-                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-none bg-line">
+                <div
+                  role="progressbar"
+                  aria-label={`Funding progress for partnership ${row.id}`}
+                  aria-valuenow={Math.round(Math.min(100, (row.funded / row.goal) * 100))}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  className="mt-2 h-1.5 w-full overflow-hidden rounded-none bg-line"
+                >
                   <div
                     className="h-full rounded-none bg-mint"
                     style={{ width: `${Math.min(100, (row.funded / row.goal) * 100)}%` }}
@@ -221,14 +228,20 @@ function LivePartnerships() {
               </div>
 
               {row.status === 0 ? (
-                <div className="flex gap-2.5">
+                <div className="flex flex-col gap-2.5 sm:flex-row">
                   <AmountField
                     inputMode="decimal"
+                    aria-label={`Amount of USDG to fund partnership ${row.id}`}
                     placeholder="0.00"
                     value={amounts[row.id] ?? ""}
                     onChange={event => setAmounts(current => ({ ...current, [row.id]: event.target.value }))}
                   />
-                  <PrimaryButton disabled={busy || !address} onClick={() => fund(row)}>
+                  <PrimaryButton
+                    disabled={busy || !address}
+                    onClick={() => fund(row)}
+                    className="shrink-0"
+                    aria-label={`Fund partnership ${row.id}`}
+                  >
                     Fund
                   </PrimaryButton>
                 </div>
@@ -292,16 +305,23 @@ function DemoPartnerships() {
                   Operator {row.operator} · keeps {row.share}% of profit
                 </span>
               </div>
-              <span className="text-[13px] tracking-[-0.01em] text-haze">Returned {usd(row.returned, 0)}</span>
+              <span className="text-[13px] tracking-[-0.01em] text-haze">Returned {usd(row.returned)}</span>
             </div>
             <div>
               <div className="flex items-baseline justify-between text-[13px] tracking-[-0.01em]">
                 <span className="text-haze">Funded</span>
-                <span className="text-mist [font-variant-numeric:tabular-nums]">
-                  {usd(row.funded, 0)} / {usd(row.goal, 0)}
+                <span className="text-mist">
+                  {usd(row.funded)} / {usd(row.goal)}
                 </span>
               </div>
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-none bg-line">
+              <div
+                role="progressbar"
+                aria-label={`Funding progress for partnership ${row.id}`}
+                aria-valuenow={Math.round(Math.min(100, (row.funded / row.goal) * 100))}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                className="mt-2 h-1.5 w-full overflow-hidden rounded-none bg-line"
+              >
                 <div
                   className="h-full rounded-none bg-mint"
                   style={{ width: `${Math.min(100, (row.funded / row.goal) * 100)}%` }}

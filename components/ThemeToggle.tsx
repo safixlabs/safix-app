@@ -49,7 +49,7 @@ export default function ThemeToggle() {
       onClick={() => setTheme(next)}
       aria-label={`Switch to ${next} theme`}
       title={`Switch to ${next} theme`}
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[3px] border border-line text-mist transition-colors hover:border-mint hover:text-mint"
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[3px] border border-control text-mist transition-colors hover:border-mint hover:text-mint"
     >
       {theme === "light" ? (
         <svg viewBox="0 0 20 20" aria-hidden className="h-4 w-4">

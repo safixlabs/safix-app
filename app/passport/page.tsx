@@ -57,7 +57,7 @@ function LivePassport() {
         <Stat label="Holdings disclosed" value="0%" hint="Eligibility signals only" />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr] [&>*]:min-w-0">
         <Panel title="What this passport proves">
           <ul className="flex flex-col divide-y divide-line">
             {passport.checks.map((check, index) => {
@@ -69,6 +69,7 @@ function LivePassport() {
                     className={`text-[14.5px] leading-snug tracking-[-0.01em] ${done ? "text-mist" : "text-haze"}`}
                   >
                     {check}
+                    <span className="sr-only">. {done ? "Attested" : "Not attested yet"}</span>
                   </span>
                 </li>
               )
@@ -106,13 +107,16 @@ function DemoPassport() {
         <Stat label="Holdings disclosed" value="0%" hint="Eligibility signals only" />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr] [&>*]:min-w-0">
         <Panel title="What this passport proves">
           <ul className="flex flex-col divide-y divide-line">
             {passport.checks.map(check => (
               <li key={check} className="flex items-center gap-3.5 py-3.5">
                 <Check />
-                <span className="text-[14.5px] leading-snug tracking-[-0.01em] text-mist">{check}</span>
+                <span className="text-[14.5px] leading-snug tracking-[-0.01em] text-mist">
+                  {check}
+                  <span className="sr-only">. Attested</span>
+                </span>
               </li>
             ))}
           </ul>

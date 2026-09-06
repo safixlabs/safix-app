@@ -8,6 +8,7 @@ import {
   AmountField,
   AssetMark,
   Field,
+  GhostButton,
   HealthBadge,
   HealthBar,
   PageHeader,
@@ -20,7 +21,7 @@ import {
 } from "@/components/ui"
 import { track, type AnalyticsEvent } from "@/lib/analytics"
 import { activeChain } from "@/lib/chain"
-import { collateralAssets, originationFeeRate, redemptionFeeRate, usd } from "@/lib/demo"
+import { collateralAssets, originationFeeRate, price, redemptionFeeRate, tokenAmount, usd } from "@/lib/demo"
 import { humanError } from "@/lib/errors"
 import { dropToLiquidation, healthStateOf, liquidationPrice1e18, priceToNumber } from "@/lib/risk"
 import {
@@ -38,7 +39,6 @@ import {
 } from "@/lib/safix"
 
 const tokenUnits = (value: number) => BigInt(Math.round(value * 1e6)) * 10n ** 12n
-const price = (value: number) => usd(value, value >= 100 ? 2 : 4)
 
 function RiskPanel({
   collateralValue,
@@ -284,7 +284,7 @@ function LiveBorrow() {
         error={error}
       />
 
-      <div className="grid items-start gap-4 lg:grid-cols-[1.1fr_1fr]">
+      <div className="grid items-start gap-4 lg:grid-cols-[1.1fr_1fr] [&>*]:min-w-0">
         <div className="flex flex-col gap-4">
           <Panel title="Collateral">
             <ul className="flex flex-col gap-2.5">
@@ -295,7 +295,7 @@ function LiveBorrow() {
                     aria-pressed={index === assetIndex}
                     onClick={() => setAssetIndex(index)}
                     className={`flex w-full items-center justify-between gap-3 rounded-[3px] border px-4 py-3.5 text-left transition-colors ${
-                      index === assetIndex ? "border-mint bg-carbon/60" : "border-line bg-carbon/30 hover:border-haze"
+                      index === assetIndex ? "border-mint bg-carbon/60" : "border-control bg-carbon/30 hover:border-mint"
                     }`}
                   >
                     <span className="flex min-w-0 items-center gap-3">
@@ -317,36 +317,34 @@ function LiveBorrow() {
             <div className="mt-5 flex flex-col gap-3 border-t border-line pt-5">
               <div className="flex items-baseline justify-between text-[13px] tracking-[-0.01em]">
                 <span className="text-haze">Locked</span>
-                <span className="text-mist [font-variant-numeric:tabular-nums]">
-                  {uiTokenAmount(collateral, uiMultiplier.data).toFixed(4)} {asset?.symbol}
+                <span className="text-mist">
+                  {tokenAmount(uiTokenAmount(collateral, uiMultiplier.data))} {asset?.symbol}
                 </span>
               </div>
               <div className="flex items-baseline justify-between text-[13px] tracking-[-0.01em]">
                 <span className="text-haze">In wallet</span>
-                <span className="text-mist [font-variant-numeric:tabular-nums]">
-                  {uiTokenAmount(tokenBalance, uiMultiplier.data).toFixed(4)} {asset?.symbol}
+                <span className="text-mist">
+                  {tokenAmount(uiTokenAmount(tokenBalance, uiMultiplier.data))} {asset?.symbol}
                 </span>
               </div>
               <Field
                 inputMode="decimal"
+                aria-label={`Amount of ${asset?.symbol ?? "collateral"} to lock`}
                 placeholder={`Amount of ${asset?.symbol ?? ""} to lock`}
                 value={lockAmount}
                 onChange={event => setLockAmount(event.target.value)}
               />
               <QuickAmounts
-                onPick={fraction => setLockAmount((uiTokenAmount(tokenBalance) * fraction).toFixed(4))}
+                label={`${asset?.symbol ?? "collateral"} to lock`}
+                onPick={fraction => setLockAmount(tokenAmount(uiTokenAmount(tokenBalance) * fraction))}
                 disabled={tokenBalance === 0n}
               />
               <PrimaryButton disabled={lockUnits === 0n || busy || !address} onClick={lock} className="w-full">
                 {busy ? "Confirming…" : needsLockApproval ? `Approve ${asset?.symbol}` : "Lock collateral"}
               </PrimaryButton>
-              <button
-                onClick={mintTestAsset}
-                disabled={busy || !address}
-                className="rounded-[3px] border border-line px-5 py-2 text-[12.5px] font-medium tracking-[-0.01em] text-haze transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
-              >
+              <GhostButton size="sm" onClick={mintTestAsset} disabled={busy || !address}>
                 Mint 10 test {asset?.symbol}
-              </button>
+              </GhostButton>
             </div>
           </Panel>
 
@@ -401,6 +399,7 @@ function LiveBorrow() {
               </div>
               <AmountField
                 inputMode="decimal"
+                aria-label="Amount of USDG to draw"
                 placeholder="0.00"
                 value={drawAmount}
                 onChange={event => {
@@ -409,6 +408,7 @@ function LiveBorrow() {
                 }}
               />
               <QuickAmounts
+                label="USDG to draw"
                 onPick={fraction => {
                   setDrawAmount(floorTo(fromUsdgUnits(maxDraw) * fraction, 2).toFixed(2))
                   setAcceptedRisk(false)
@@ -447,7 +447,7 @@ function LiveBorrow() {
                     type="checkbox"
                     checked={acceptedRisk}
                     onChange={event => setAcceptedRisk(event.target.checked)}
-                    className="mt-0.5 h-3.5 w-3.5 accent-mint"
+                    className="mt-0.5 h-4 w-4 accent-mint"
                   />
                   <span>
                     This draw leaves the position close to liquidation. A {(dropToLiquidation(currentPriceValue, liqAfter) * 100).toFixed(1)}%
@@ -470,15 +470,17 @@ function LiveBorrow() {
             <div className="flex flex-col gap-4">
               <div className="flex items-baseline justify-between text-[12.5px] tracking-[-0.02em] text-haze">
                 <span>Wallet balance</span>
-                <span className="text-mist [font-variant-numeric:tabular-nums]">{usd(fromUsdgUnits(usdgBalance))}</span>
+                <span className="text-mist">{usd(fromUsdgUnits(usdgBalance))}</span>
               </div>
               <AmountField
                 inputMode="decimal"
+                aria-label="Amount of USDG to repay"
                 placeholder="0.00"
                 value={repayAmount}
                 onChange={event => setRepayAmount(event.target.value)}
               />
               <QuickAmounts
+                label="USDG to repay"
                 onPick={fraction => setRepayAmount((fromUsdgUnits(debt) * fraction).toFixed(2))}
                 disabled={debt === 0n}
               />
@@ -490,13 +492,9 @@ function LiveBorrow() {
                 <div className="flex flex-col gap-2 border-t border-line pt-4">
                   <SummaryRow label={`Redemption fee (${Number(redeemBps) / 100}%)`} value={usd(fromUsdgUnits(closeOwed - debt))} />
                   <SummaryRow label="Total to close" value={usd(fromUsdgUnits(closeOwed))} />
-                  <button
-                    onClick={closeOut}
-                    disabled={busy || !address}
-                    className="rounded-[3px] border border-line px-5 py-2.5 text-[12.5px] font-medium tracking-[-0.01em] text-mist transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
-                  >
+                  <GhostButton size="sm" onClick={closeOut} disabled={busy || !address}>
                     {needsCloseApproval ? `Approve ${usd(fromUsdgUnits(closeOwed))}` : "Close position and unlock collateral"}
-                  </button>
+                  </GhostButton>
                 </div>
               ) : null}
 
@@ -536,7 +534,7 @@ function DemoBorrow() {
   const needsAcknowledgement = draw > 0 && (stateAfter === "atRisk" || stateAfter === "liquidatable")
 
   return (
-    <div className="grid items-start gap-4 lg:grid-cols-[1.1fr_1fr]">
+    <div className="grid items-start gap-4 lg:grid-cols-[1.1fr_1fr] [&>*]:min-w-0">
       <Panel title="Collateral">
         <ul className="flex flex-col gap-2.5">
           {collateralAssets.map(candidate => (
@@ -549,7 +547,7 @@ function DemoBorrow() {
                   setAcceptedRisk(false)
                 }}
                 className={`flex w-full items-center justify-between gap-3 rounded-[3px] border px-4 py-3.5 text-left transition-colors ${
-                  candidate.id === assetId ? "border-mint bg-carbon/60" : "border-line bg-carbon/30 hover:border-haze"
+                  candidate.id === assetId ? "border-mint bg-carbon/60" : "border-control bg-carbon/30 hover:border-mint"
                 }`}
               >
                 <span className="flex min-w-0 items-center gap-3">
@@ -564,7 +562,7 @@ function DemoBorrow() {
                   </span>
                 </span>
                 <span className="text-right">
-                  <span className="block text-[13.5px] text-mist [font-variant-numeric:tabular-nums]">
+                  <span className="block text-[13.5px] text-mist">
                     {usd(candidate.price * candidate.balance)}
                   </span>
                   <span className="mt-0.5 block text-[12px] tracking-[-0.02em] text-haze">
@@ -581,10 +579,11 @@ function DemoBorrow() {
         <div className="flex flex-col gap-4">
           <div className="flex items-baseline justify-between text-[12.5px] tracking-[-0.02em] text-haze">
             <span>Available to draw</span>
-            <span className="text-mist [font-variant-numeric:tabular-nums]">{usd(maxDraw)}</span>
+            <span className="text-mist">{usd(maxDraw)}</span>
           </div>
           <AmountField
             inputMode="decimal"
+            aria-label="Amount of USDG to draw"
             placeholder="0.00"
             value={amount}
             onChange={event => {
@@ -593,6 +592,7 @@ function DemoBorrow() {
             }}
           />
           <QuickAmounts
+            label="USDG to draw"
             onPick={fraction => {
               setAmount((maxDraw * fraction).toFixed(2))
               setAcceptedRisk(false)
@@ -600,7 +600,7 @@ function DemoBorrow() {
           />
 
           <div className="flex flex-col divide-y divide-line border-y border-line">
-            <SummaryRow label="Collateral locked" value={`${asset.balance} ${asset.symbol} · ${usd(collateralValue)}`} />
+            <SummaryRow label="Collateral locked" value={`${tokenAmount(asset.balance)} ${asset.symbol} · ${usd(collateralValue)}`} />
             <SummaryRow
               label={`One-time fee now (${(originationFeeRate * 100).toFixed(1)}%)`}
               value={usd(fee)}
@@ -628,7 +628,7 @@ function DemoBorrow() {
                 type="checkbox"
                 checked={acceptedRisk}
                 onChange={event => setAcceptedRisk(event.target.checked)}
-                className="mt-0.5 h-3.5 w-3.5 accent-mint"
+                className="mt-0.5 h-4 w-4 accent-mint"
               />
               <span>
                 This draw leaves the position close to liquidation. A {(dropToLiquidation(asset.price, liqAfter) * 100).toFixed(1)}%

@@ -146,7 +146,15 @@ export async function connect(page: Page) {
 
   const picker = page.getByRole("dialog", { name: /Connect a wallet/i })
   if (await picker.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await picker.getByRole("button").filter({ hasNotText: "Close" }).first().click()
+    // Name the wallet rather than trusting the order: Coinbase and
+    // WalletConnect are in this list too, and neither can complete a connection
+    // in a headless browser.
+    const option = picker
+      .locator("li button")
+      .filter({ hasText: /injected|metamask|rabby|brave|browser/i })
+      .first()
+    await option.waitFor({ state: "visible", timeout: 10_000 })
+    await option.click()
   }
   // A wallet on a chain the app does not serve is shown a switch control in
   // place of its address, so both count as connected.

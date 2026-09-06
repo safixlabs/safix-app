@@ -106,12 +106,22 @@ const hexToRgb = (hex: string): [number, number, number] => {
 export default function Backdrop() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [theme, setTheme] = useState<"dark" | "light">("dark")
+  const [reducedMotion, setReducedMotion] = useState(false)
 
   useEffect(() => {
     setTheme(currentTheme())
     const observer = new MutationObserver(() => setTheme(currentTheme()))
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] })
     return () => observer.disconnect()
+  }, [])
+
+  // Picked up while the page is open, not only on load.
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)")
+    const sync = () => setReducedMotion(media.matches)
+    sync()
+    media.addEventListener("change", sync)
+    return () => media.removeEventListener("change", sync)
   }, [])
 
   useEffect(() => {
@@ -160,17 +170,6 @@ export default function Backdrop() {
     gl.uniform3f(locs.bg, ...hexToRgb(palette.bg))
     gl.uniform3fv(locs.colors, new Float32Array(palette.colors.flatMap(hexToRgb)))
 
-    const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio, 2)
-      canvas.width = window.innerWidth * dpr
-      canvas.height = window.innerHeight * dpr
-      gl.viewport(0, 0, canvas.width, canvas.height)
-      gl.uniform2f(locs.res, canvas.width, canvas.height)
-    }
-
-    resize()
-    window.addEventListener("resize", resize)
-
     let raf = 0
     const render = (t: number) => {
       gl.uniform1f(locs.time, t * 0.001 * SPEED)
@@ -182,8 +181,21 @@ export default function Backdrop() {
       raf = requestAnimationFrame(loop)
     }
 
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    const resize = () => {
+      const dpr = Math.min(window.devicePixelRatio, 2)
+      canvas.width = window.innerWidth * dpr
+      canvas.height = window.innerHeight * dpr
+      gl.viewport(0, 0, canvas.width, canvas.height)
+      gl.uniform2f(locs.res, canvas.width, canvas.height)
+      // Resizing clears the buffer, and with motion off nothing else will redraw it.
+      if (reducedMotion) render(12000)
+    }
+
+    resize()
+    window.addEventListener("resize", resize)
+
     if (reducedMotion) {
+      // One still frame, so the page keeps its texture without anything moving.
       render(12000)
     } else {
       raf = requestAnimationFrame(loop)
@@ -193,7 +205,7 @@ export default function Backdrop() {
       window.removeEventListener("resize", resize)
       cancelAnimationFrame(raf)
     }
-  }, [theme])
+  }, [theme, reducedMotion])
 
   return (
     <canvas

@@ -6,6 +6,7 @@ import {
   AmountField,
   AssetMark,
   ConfirmedLink,
+  GhostButton,
   Meter,
   PageHeader,
   Panel,
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui"
 import { track, type AnalyticsEvent } from "@/lib/analytics"
 import { activeChain } from "@/lib/chain"
-import { usd } from "@/lib/demo"
+import { tokenAmount, usd } from "@/lib/demo"
 import { TxToast } from "@/components/TxToast"
 import { humanError } from "@/lib/errors"
 import {
@@ -61,16 +62,20 @@ function PoolStats({
     <div className="grid gap-4 md:grid-cols-3">
       <Stat
         label={<><UsdgMark className="h-3.5 w-3.5" />Pool size</>}
-        value={usd(poolSize, 0)}
+        value={usd(poolSize)}
         hint="Deposited by liquidity providers"
       />
       <div className="rounded-[4px] border border-line bg-panel/80 p-5">
         <p className="text-[12.5px] tracking-[-0.02em] text-haze">Deployed to loans</p>
-        <p className="mt-2 text-[24px] font-bold leading-none tracking-[-0.01em] text-fog [font-variant-numeric:tabular-nums] md:text-[27px]">
-          {usd(deployed, 0)}
+        <p className="mt-2 text-[24px] font-bold leading-none tracking-[-0.01em] text-fog md:text-[27px]">
+          {usd(deployed)}
         </p>
         <div className="mt-4">
-          <Meter value={utilisation} label={`${(utilisation * 100).toFixed(1)}% utilised · ${usd(available, 0)} idle`} />
+          <Meter
+            value={utilisation}
+            name="Share of the pool deployed to loans"
+            label={`${(utilisation * 100).toFixed(1)}% utilised · ${usd(available)} idle`}
+          />
         </div>
       </div>
       <Stat
@@ -111,8 +116,8 @@ function GainsCard({
                 <p className="text-[14.5px] font-semibold tracking-[-0.01em] text-fog">{row.symbol}</p>
                 <p className="mt-0.5 text-[12px] tracking-[-0.02em] text-haze">Seized collateral</p>
               </div>
-              <p className="text-[14px] tracking-[-0.01em] text-mist [font-variant-numeric:tabular-nums]">
-                {row.amount.toFixed(4)}
+              <p className="text-[14px] tracking-[-0.01em] text-mist">
+                {tokenAmount(row.amount)}
               </p>
             </li>
           ))}
@@ -195,20 +200,25 @@ function LiquidityCard({
   return (
     <Panel title={<><UsdgMark className="h-[18px] w-[18px]" />Manage liquidity</>}>
       <div className="flex flex-col gap-4">
-        <Segmented options={modeOptions} value={mode} onChange={setMode} />
+        <Segmented options={modeOptions} value={mode} onChange={setMode} label="Deposit or withdraw" />
 
         <div className="flex items-baseline justify-between text-[12.5px] tracking-[-0.02em] text-haze">
           <span>{mode === "deposit" ? "Wallet balance" : "Available to withdraw"}</span>
-          <span className="[font-variant-numeric:tabular-nums] text-mist">{usd(ceiling)}</span>
+          <span className="text-mist">{usd(ceiling)}</span>
         </div>
 
         <AmountField
           inputMode="decimal"
+          aria-label={mode === "deposit" ? "Amount of USDG to deposit" : "Amount of USDG to withdraw"}
           placeholder="0.00"
           value={amount}
           onChange={event => setAmount(event.target.value)}
         />
-        <QuickAmounts onPick={fraction => setAmount((ceiling * fraction).toFixed(2))} disabled={ceiling <= 0} />
+        <QuickAmounts
+          label={mode === "deposit" ? "USDG to deposit" : "USDG to withdraw"}
+          onPick={fraction => setAmount((ceiling * fraction).toFixed(2))}
+          disabled={ceiling <= 0}
+        />
 
         <div className="flex flex-col divide-y divide-line border-y border-line">
           <SummaryRow label="Your deposit after" value={usd(depositAfter)} />
@@ -343,7 +353,7 @@ function LivePool() {
         error={error}
       />
       <PoolStats poolSize={poolSize} available={available} yourDeposit={yourDeposit} connected={Boolean(address)} />
-      <div className="grid items-start gap-4 lg:grid-cols-[1.05fr_1fr]">
+      <div className="grid items-start gap-4 lg:grid-cols-[1.05fr_1fr] [&>*]:min-w-0">
         <LiquidityCard
           mode={mode}
           setMode={setMode}
@@ -367,13 +377,9 @@ function LivePool() {
           }
           note={status}
           extra={
-            <button
-              onClick={mintTestUsdg}
-              disabled={busy || !address}
-              className="rounded-[3px] border border-line px-5 py-2 text-[12.5px] font-medium tracking-[-0.01em] text-haze transition-colors hover:border-mint hover:text-mint disabled:opacity-50"
-            >
+            <GhostButton size="sm" onClick={mintTestUsdg} disabled={busy || !address}>
               <span className="inline-flex items-center gap-1.5">Mint 10,000 test <Usdg /></span>
-            </button>
+            </GhostButton>
           }
         />
         <div className="flex flex-col gap-4">
@@ -408,7 +414,7 @@ function DemoPool() {
   return (
     <>
       <PoolStats poolSize={poolSize} available={available} yourDeposit={yourDeposit} connected />
-      <div className="grid items-start gap-4 lg:grid-cols-[1.05fr_1fr]">
+      <div className="grid items-start gap-4 lg:grid-cols-[1.05fr_1fr] [&>*]:min-w-0">
         <LiquidityCard
           mode={mode}
           setMode={next => {

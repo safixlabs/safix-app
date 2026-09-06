@@ -37,8 +37,15 @@ const detailOf = (kind: WalletKind): string => {
   return "Detected in this browser"
 }
 
-/** Wallets already in the browser first, then Coinbase, then WalletConnect. */
-const rank: Record<WalletKind, number> = { browser: 0, coinbase: 1, walletconnect: 2, generic: 3 }
+/**
+ * Wallets already in the browser first, then the remote options.
+ *
+ * The plain injected entry ranks second rather than last because it only
+ * survives the filter below when nothing announced itself, and in that case it
+ * is the wallet this person actually installed. Putting Coinbase above it
+ * offers a download to somebody who is already holding a wallet.
+ */
+const rank: Record<WalletKind, number> = { browser: 0, generic: 1, coinbase: 2, walletconnect: 3 }
 
 /**
  * Turns the raw wagmi connector list into what the picker should show.

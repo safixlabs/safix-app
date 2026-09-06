@@ -6,7 +6,7 @@ import { useAccount, usePublicClient } from "wagmi"
 import { reportError } from "@/lib/monitoring"
 import { AssetMark, HealthBadge, HealthBar, PageHeader, Panel, Stat, UsdgMark } from "@/components/ui"
 import { activeChain } from "@/lib/chain"
-import { demoPositions, maxLtvFor, passport, usd } from "@/lib/demo"
+import { demoPositions, maxLtvFor, passport, price, tokenAmount, usd } from "@/lib/demo"
 import { reportReadFailure, reportReadSuccess } from "@/lib/health"
 import { useVisibleInterval } from "@/lib/polling"
 import { distanceToLiquidation, healthStateOf, liquidationPrice1e18, priceToNumber } from "@/lib/risk"
@@ -25,8 +25,6 @@ type PositionRow = {
   liqThresholdBps: number
 }
 
-const price = (value: number) => usd(value, value >= 100 ? 2 : 4)
-
 function PositionLine({ row }: { row: PositionRow }) {
   const health = row.debt > 0 ? row.value / row.debt : 0
   const hasDebt = row.debt > 0
@@ -42,21 +40,21 @@ function PositionLine({ row }: { row: PositionRow }) {
           <AssetMark symbol={row.symbol} className="h-9 w-9" />
           <div>
             <p className="text-[15px] font-semibold tracking-[-0.01em] text-fog">{row.symbol}</p>
-            <p className="mt-1 text-[12px] tracking-[-0.02em] text-haze">{row.locked.toFixed(4)} locked</p>
+            <p className="mt-1 text-[12px] tracking-[-0.02em] text-haze">{tokenAmount(row.locked)} locked</p>
           </div>
         </div>
         <div>
           <p className="text-[12px] tracking-[-0.02em] text-haze">Value</p>
-          <p className="mt-1 text-[14px] text-mist [font-variant-numeric:tabular-nums]">{usd(row.value)}</p>
+          <p className="mt-1 text-[14px] text-mist">{usd(row.value)}</p>
         </div>
         <div>
           <p className="text-[12px] tracking-[-0.02em] text-haze">Debt</p>
-          <p className="mt-1 text-[14px] text-mist [font-variant-numeric:tabular-nums]">{usd(row.debt)}</p>
+          <p className="mt-1 text-[14px] text-mist">{usd(row.debt)}</p>
         </div>
         {hasDebt ? (
           <div className="flex flex-col items-start gap-2">
             <HealthBadge health={health} liqThresholdBps={row.liqThresholdBps} hasDebt />
-            <HealthBar ratio={health} liqThresholdBps={row.liqThresholdBps} hasDebt />
+            <HealthBar ratio={health} liqThresholdBps={row.liqThresholdBps} hasDebt label={`${row.symbol} position health`} />
           </div>
         ) : (
           <span className="text-[13px] text-haze">No debt</span>
@@ -67,18 +65,18 @@ function PositionLine({ row }: { row: PositionRow }) {
         <p className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[12.5px] tracking-[-0.02em] text-haze">
           <span>
             {row.symbol} now{" "}
-            <span className="text-mist [font-variant-numeric:tabular-nums]">{price(row.price)}</span>
+            <span className="text-mist">{price(row.price)}</span>
           </span>
           <span>
             liquidates at{" "}
-            <span className="text-mist [font-variant-numeric:tabular-nums]">{price(row.liquidationPrice)}</span>
+            <span className="text-mist">{price(row.liquidationPrice)}</span>
           </span>
           {past ? (
             <span className="text-danger">already past it</span>
           ) : (
             <span>
               a{" "}
-              <span className="text-mist [font-variant-numeric:tabular-nums]">{(room * 100).toFixed(1)}%</span> fall
+              <span className="text-mist">{(room * 100).toFixed(1)}%</span> fall
               away
             </span>
           )}

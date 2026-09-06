@@ -71,45 +71,57 @@ export function TxToast(state: TxState) {
     return () => clearTimeout(timer)
   }, [phase, key])
 
-  if (!phase || dismissed === key) return null
-
   const url = explorerTxUrl(state.hash)
   const detail = state.error
     ? humanError(state.error)
     : state.label ?? "This is the only step, nothing accrues while you wait."
+  const visible = phase !== null && dismissed !== key
+  const announcement = phase ? `${phaseCopy[phase]}. ${detail}` : ""
 
+  // The live regions stay mounted and empty so a screen reader is already listening when
+  // a transaction changes state; a region that appears with its text is often missed.
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="fixed bottom-5 right-5 z-50 w-[320px] rounded-[4px] border border-line bg-panel p-4 shadow-lg"
-    >
-      <div className="flex items-start gap-3">
-        <Dot phase={phase} />
-        <div className="min-w-0 flex-1">
-          <p className="text-[13.5px] font-semibold tracking-[-0.01em] text-fog">{phaseCopy[phase]}</p>
-          <p className="mt-1 text-[12.5px] leading-[1.5] tracking-[-0.01em] text-mist">{detail}</p>
-          {url ? (
-            <a
-              href={url}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 inline-block text-[12.5px] text-mint transition-colors hover:text-mint-bright"
-            >
-              View on explorer ↗
-            </a>
-          ) : null}
-        </div>
-        <button
-          onClick={() => setDismissed(key)}
-          aria-label="Dismiss"
-          className="shrink-0 text-haze transition-colors hover:text-fog"
-        >
-          <svg viewBox="0 0 16 16" aria-hidden className="h-3.5 w-3.5">
-            <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          </svg>
-        </button>
+    <>
+      <div role="status" aria-live="polite" className="sr-only">
+        {phase && phase !== "failed" ? announcement : ""}
       </div>
-    </div>
+      <div role="alert" className="sr-only">
+        {phase === "failed" ? announcement : ""}
+      </div>
+      {visible && phase ? (
+        <div
+          data-testid="tx-status"
+          className="fixed bottom-5 right-5 z-50 w-[min(320px,calc(100vw-2.5rem))] rounded-[4px] border border-line bg-panel p-4 shadow-lg"
+        >
+          <div className="flex items-start gap-3">
+            <Dot phase={phase} />
+            <div className="min-w-0 flex-1">
+              <p className="text-[13.5px] font-semibold tracking-[-0.01em] text-fog">{phaseCopy[phase]}</p>
+              <p className="mt-1 text-[12.5px] leading-[1.5] tracking-[-0.01em] text-mist">{detail}</p>
+              {url ? (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-block text-[12.5px] text-mint transition-colors hover:text-mint-bright"
+                >
+                  View on explorer <span aria-hidden>↗</span>
+                  <span className="sr-only">, opens in a new tab</span>
+                </a>
+              ) : null}
+            </div>
+            <button
+              onClick={() => setDismissed(key)}
+              aria-label="Dismiss transaction status"
+              className="-m-1 flex h-6 w-6 shrink-0 items-center justify-center text-haze transition-colors hover:text-fog"
+            >
+              <svg viewBox="0 0 16 16" aria-hidden className="h-3.5 w-3.5">
+                <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </>
   )
 }
