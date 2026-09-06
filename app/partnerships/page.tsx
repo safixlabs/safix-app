@@ -8,6 +8,7 @@ import { reportReadFailure, reportReadSuccess } from "@/lib/health"
 import { useVisibleInterval } from "@/lib/polling"
 import { TxToast } from "@/components/TxToast"
 import { humanError } from "@/lib/errors"
+import { reportError } from "@/lib/monitoring"
 import { deskAbi, deskAddress, erc20Abi, fromUsdgUnits, usdgAddress, usdgUnits } from "@/lib/safix"
 
 const statusLabels = ["Funding", "Active", "Settled", "Cancelled"] as const
@@ -121,7 +122,13 @@ function LivePartnerships() {
       setLoaded(true)
       reportReadSuccess()
     }
-    const run = () => load().catch(() => reportReadFailure())
+    // A read that throws here would otherwise leave the screen loading for
+    // ever, with nothing saying why. The failure is both recorded and shown.
+    const run = () =>
+      load().catch(error => {
+        reportError(error, { screen: "partnerships" })
+        reportReadFailure()
+      })
     run()
     refresh.current = run
     return () => {

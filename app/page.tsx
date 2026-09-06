@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { useAccount, usePublicClient } from "wagmi"
+import { reportError } from "@/lib/monitoring"
 import { AssetMark, HealthBadge, HealthBar, PageHeader, Panel, Stat, UsdgMark } from "@/components/ui"
 import { demoPositions, maxLtvFor, passport, usd } from "@/lib/demo"
 import { reportReadFailure, reportReadSuccess } from "@/lib/health"
@@ -180,8 +181,12 @@ function LiveDashboard() {
       reportReadSuccess()
     }
     // A read that throws here would otherwise leave the screen loading for
-    // ever, with nothing saying why.
-    const run = () => load().catch(() => reportReadFailure())
+    // ever, with nothing saying why. The failure is both recorded and shown.
+    const run = () =>
+      load().catch(error => {
+        reportError(error, { screen: "dashboard" })
+        reportReadFailure()
+      })
     run()
     refresh.current = run
     return () => {

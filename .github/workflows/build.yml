@@ -16,6 +16,14 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          # The release ties uploaded source maps to the events the app reports.
+          NEXT_PUBLIC_RELEASE: ${{ github.sha }}
+          # Absent on forks and on pull requests from them; the build still
+          # succeeds and the maps are deleted either way.
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
 
   e2e:
     runs-on: ubuntu-latest

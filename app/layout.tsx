@@ -5,6 +5,7 @@ import { DM_Sans } from "next/font/google"
 import "./globals.css"
 import Backdrop from "@/components/Backdrop"
 import RpcNotice from "@/components/RpcNotice"
+import Telemetry from "@/components/Telemetry"
 import TopNav from "@/components/TopNav"
 import Providers from "./providers"
 
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <Backdrop />
         <Providers>
+          <Telemetry />
           <TopNav />
           <RpcNotice />
           <main className="mx-auto w-full max-w-[1120px] px-6 pb-24 pt-10 md:pt-14">{children}</main>

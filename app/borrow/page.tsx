@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useAccount, useReadContract, useReadContracts, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
 import LiquidationHistory from "@/components/LiquidationHistory"
 import { TxToast } from "@/components/TxToast"
@@ -18,6 +18,7 @@ import {
   Usdg,
   UsdgMark
 } from "@/components/ui"
+import { track, type AnalyticsEvent } from "@/lib/analytics"
 import { collateralAssets, originationFeeRate, redemptionFeeRate, usd } from "@/lib/demo"
 import { humanError } from "@/lib/errors"
 import { dropToLiquidation, healthStateOf, liquidationPrice1e18, priceToNumber } from "@/lib/risk"
@@ -126,9 +127,13 @@ function LiveBorrow() {
 
   const { writeContract, data: txHash, isPending, error } = useWriteContract()
   const receipt = useWaitForTransactionReceipt({ hash: txHash })
+  // The step to record if the transaction now in flight confirms.
+  const pendingStep = useRef<AnalyticsEvent | undefined>(undefined)
 
   useEffect(() => {
     if (receipt.isSuccess) {
+      if (pendingStep.current) track(pendingStep.current, { asset: asset?.symbol })
+      pendingStep.current = undefined
       poolReads.refetch()
       walletReads.refetch()
       setLockAmount("")
@@ -213,13 +218,24 @@ function LiveBorrow() {
     if (needsLockApproval) {
       writeContract({ abi: erc20Abi, address: asset.address, functionName: "approve", args: [poolAddress, lockUnits] })
     } else {
+      track("lock_started", { asset: asset.symbol })
+      pendingStep.current = "lock_signed"
       writeContract({ abi: safixPoolAbi, address: poolAddress, functionName: "lockCollateral", args: [asset.address, lockUnits] })
     }
   }
 
   const draw = () => {
-    if (!asset || !poolAddress || drawUnits === 0n || overCapacity || overLiquidity) return
-    if (needsAcknowledgement && !acceptedRisk) return
+    if (!asset || !poolAddress || drawUnits === 0n) return
+    if (overCapacity || overLiquidity || (needsAcknowledgement && !acceptedRisk)) {
+      // A refusal is a step too: it is the one that says why the funnel ends.
+      track("draw_blocked", {
+        asset: asset.symbol,
+        reason: overCapacity ? "capacity" : overLiquidity ? "liquidity" : "unacknowledged"
+      })
+      return
+    }
+    track("draw_started", { asset: asset.symbol })
+    pendingStep.current = "draw_signed"
     writeContract({ abi: safixPoolAbi, address: poolAddress, functionName: "draw", args: [asset.address, drawUnits] })
   }
 
@@ -228,6 +244,7 @@ function LiveBorrow() {
     if (needsRepayApproval) {
       writeContract({ abi: erc20Abi, address: usdgAddress, functionName: "approve", args: [poolAddress, repayUnits] })
     } else {
+      pendingStep.current = "repay_signed"
       writeContract({ abi: safixPoolAbi, address: poolAddress, functionName: "repay", args: [asset.address, repayUnits] })
     }
   }
@@ -237,6 +254,7 @@ function LiveBorrow() {
     if (needsCloseApproval) {
       writeContract({ abi: erc20Abi, address: usdgAddress, functionName: "approve", args: [poolAddress, closeOwed] })
     } else {
+      pendingStep.current = "close_signed"
       writeContract({ abi: safixPoolAbi, address: poolAddress, functionName: "closePosition", args: [asset.address] })
     }
   }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useAccount, useReadContract, useReadContracts, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
 import {
   AmountField,
@@ -17,6 +17,7 @@ import {
   Usdg,
   UsdgMark
 } from "@/components/ui"
+import { track, type AnalyticsEvent } from "@/lib/analytics"
 import { usd } from "@/lib/demo"
 import { TxToast } from "@/components/TxToast"
 import { humanError } from "@/lib/errors"
@@ -254,9 +255,13 @@ function LivePool() {
 
   const { writeContract, data: txHash, isPending, error } = useWriteContract()
   const receipt = useWaitForTransactionReceipt({ hash: txHash })
+  // The step to record if the transaction now in flight confirms.
+  const pendingStep = useRef<AnalyticsEvent | undefined>(undefined)
 
   useEffect(() => {
     if (receipt.isSuccess) {
+      if (pendingStep.current) track(pendingStep.current)
+      pendingStep.current = undefined
       totals.refetch()
       personal.refetch()
       gains.refetch()
@@ -286,9 +291,13 @@ function LivePool() {
       if (needsApproval) {
         writeContract({ abi: erc20Abi, address: usdgAddress, functionName: "approve", args: [poolAddress, units] })
       } else {
+        track("deposit_started")
+        pendingStep.current = "deposit_signed"
         writeContract({ abi: safixPoolAbi, address: poolAddress, functionName: "deposit", args: [units] })
       }
     } else {
+      track("withdraw_started")
+      pendingStep.current = "withdraw_signed"
       writeContract({ abi: safixPoolAbi, address: poolAddress, functionName: "withdraw", args: [units] })
     }
   }

@@ -21,8 +21,12 @@ const sections = [
     body: "The interface may be unavailable, paused, or changed at any time. The underlying contracts may be paused by their guardian in an emergency; withdrawals and repayments stay open when that happens."
   },
   {
-    title: "Privacy",
-    body: "The interface does not collect names, emails or wallet addresses. Errors are reported without addresses or balances, and analytics are limited to anonymous page views. Your wallet address is visible to the public chain by nature, not by us."
+    title: "What is collected",
+    body: "Two things, both of which can be switched off by whoever deploys this interface, and neither of which carries an address. When something fails, the stack trace, the browser, and the chain being used are sent to an error tracker hosted in the European Union; wallet addresses, balances, amounts, transaction hashes and query strings are stripped before the report leaves your browser, and no cookie or account identifier is attached. Separately, page views and named steps such as \"a deposit was started\" are counted by a cookieless analytics service, carrying only the chain and the collateral ticker."
+  },
+  {
+    title: "What is never collected",
+    body: "No names, no emails, no wallet addresses, no balances, no amounts, and nothing that follows you between sessions. Nothing is sold or shared for advertising. Your wallet address is visible to the public chain by nature, not by us, and this interface does not report it anywhere."
   },
   {
     title: "Jurisdiction",

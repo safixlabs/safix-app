@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi"
+import { track } from "@/lib/analytics"
 import { activeChain } from "@/lib/chain"
 import RiskGate, { hasAcknowledgedRisk } from "./RiskGate"
 import ThemeToggle from "./ThemeToggle"
@@ -28,7 +29,14 @@ function WalletButton() {
           open={gateOpen}
           onAccept={() => {
             setGateOpen(false)
-            if (injectedConnector) connect({ connector: injectedConnector })
+            track("risk_acknowledged")
+            if (injectedConnector) {
+              track("connect_opened")
+              connect(
+                { connector: injectedConnector },
+                { onSuccess: () => track("connect_succeeded"), onError: () => track("connect_failed") }
+              )
+            }
           }}
           onDismiss={() => setGateOpen(false)}
         />
@@ -36,7 +44,11 @@ function WalletButton() {
         onClick={() => {
           if (!injectedConnector) return
           if (hasAcknowledgedRisk()) {
-            connect({ connector: injectedConnector })
+            track("connect_opened")
+            connect(
+              { connector: injectedConnector },
+              { onSuccess: () => track("connect_succeeded"), onError: () => track("connect_failed") }
+            )
           } else {
             setGateOpen(true)
           }

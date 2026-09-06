@@ -35,6 +35,42 @@ HTTP request, refreshed every `NEXT_PUBLIC_REFRESH_MS` while the tab is visible
 and never while it is hidden. When no endpoint answers the interface says so
 rather than showing zeroes.
 
+## Telemetry
+
+Both halves are off unless configured, so a fork or a local run reports nothing
+anywhere.
+
+```
+NEXT_PUBLIC_SENTRY_DSN       error reporting; absent means none is sent
+NEXT_PUBLIC_PLAUSIBLE_SRC    analytics script; absent means none is loaded
+NEXT_PUBLIC_RELEASE          commit being served, so traces map to source
+NEXT_PUBLIC_ENVIRONMENT      production, preview, and so on
+```
+
+Nothing identifying leaves the browser. Sentry's own collection of user info,
+cookies, headers, bodies and query strings is switched off, and every event is
+then walked and redacted anyway: accounts, transaction hashes, long hex and
+token amounts are replaced before the report is sent. What survives is the
+stack trace, the release, and the chain. Analytics is cookieless and records
+page views plus named funnel steps carrying only the chain and a collateral
+ticker.
+
+Source maps are generated, uploaded to Sentry during the same build that
+produced the bundle, and then deleted from the output, so this private
+repository is not published alongside it. The upload needs three variables in
+the build environment; without them the build still succeeds and the maps are
+still deleted.
+
+```
+SENTRY_AUTH_TOKEN            a token with project:releases
+SENTRY_ORG                   the organisation slug
+SENTRY_PROJECT               the project slug
+```
+
+Alerting is configured in Sentry rather than in code: an issue alert on the
+project, firing when the number of events in an hour exceeds its usual level,
+delivered wherever the team reads alerts.
+
 ## Screens
 
 - Dashboard: collateral value, fixed debt, available credit, passport status, positions with health.
