@@ -11,6 +11,30 @@ Deploy the contracts to Robinhood Chain Testnet, then copy `.env.example` to `.e
 - Protocol overview: [safixlabs/safix](https://github.com/safixlabs/safix)
 - Documentation: [safix-docs.vercel.app](https://safix-docs.vercel.app)
 
+## Network
+
+Reads go through the endpoints named below, in order, and fall through to the
+next one when an endpoint fails. The chain's own public RPC is always the last
+resort, so configuring nothing still works; it is rate limited and Robinhood
+documents it for wallet connectivity rather than production traffic.
+
+```
+NEXT_PUBLIC_RPC_OVERRIDE    dedicated endpoint, tried first
+NEXT_PUBLIC_RPC_FALLBACK    second endpoint, tried when the first fails
+```
+
+Providers named in Robinhood Chain's documentation: QuickNode, Alchemy,
+Blockdaemon, dRPC and Validation Cloud. One dedicated endpoint is enough — the
+public RPC stays behind it automatically, which is what makes the fallback real.
+
+Both values ship in the browser bundle, as every `NEXT_PUBLIC_` value does, so
+restrict the key to your own domain in the provider's dashboard.
+
+Reads are folded into a single Multicall3 call per screen and batched into one
+HTTP request, refreshed every `NEXT_PUBLIC_REFRESH_MS` while the tab is visible
+and never while it is hidden. When no endpoint answers the interface says so
+rather than showing zeroes.
+
 ## Screens
 
 - Dashboard: collateral value, fixed debt, available credit, passport status, positions with health.

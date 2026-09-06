@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import { DM_Sans } from "next/font/google"
 import "./globals.css"
 import Backdrop from "@/components/Backdrop"
+import RpcNotice from "@/components/RpcNotice"
 import TopNav from "@/components/TopNav"
 import Providers from "./providers"
 
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <Backdrop />
         <Providers>
           <TopNav />
+          <RpcNotice />
           <main className="mx-auto w-full max-w-[1120px] px-6 pb-24 pt-10 md:pt-14">{children}</main>
         </Providers>
         <footer className="mx-auto flex w-full max-w-[1120px] items-baseline justify-between border-t border-line px-6 pb-8 pt-6 text-[12px] tracking-[-0.02em] text-haze">

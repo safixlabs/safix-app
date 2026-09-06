@@ -1,9 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useAccount, usePublicClient, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
 import { AmountField, ConfirmedLink, PageHeader, Panel, PrimaryButton } from "@/components/ui"
 import { usd } from "@/lib/demo"
+import { reportReadFailure, reportReadSuccess } from "@/lib/health"
+import { useVisibleInterval } from "@/lib/polling"
 import { TxToast } from "@/components/TxToast"
 import { humanError } from "@/lib/errors"
 import { deskAbi, deskAddress, erc20Abi, fromUsdgUnits, usdgAddress, usdgUnits } from "@/lib/safix"
@@ -45,6 +47,11 @@ function StatusPill({ status }: { status: number }) {
 function LivePartnerships() {
   const { address } = useAccount()
   const client = usePublicClient()
+  // The periodic refresh runs only while the tab is on screen; see
+  // useVisibleInterval. `load` is held in a ref so the interval survives the
+  // effect being torn down and rebuilt on every account change.
+  const refresh = useRef<(() => void) | undefined>(undefined)
+  useVisibleInterval(() => refresh.current?.())
   const [rows, setRows] = useState<PartnershipRow[]>([])
   const [loaded, setLoaded] = useState(false)
   const [amounts, setAmounts] = useState<Record<number, string>>({})
@@ -62,35 +69,40 @@ function LivePartnerships() {
         await client.readContract({ abi: deskAbi, address: desk, functionName: "partnershipCount" })
       )
       const ids = Array.from({ length: count }, (_, id) => id)
-      const reads = await Promise.all(
-        ids.map(id =>
-          client.readContract({ abi: deskAbi, address: desk, functionName: "partnerships", args: [BigInt(id)] })
-        )
-      )
-      const payouts = address
-        ? await Promise.all(
-            ids.map(id =>
-              client.readContract({
-                abi: deskAbi,
-                address: desk,
-                functionName: "funderPayoutOf",
-                args: [BigInt(id), address]
-              })
-            )
+      // Once the count is known, the rest of the screen is one round: the terms,
+      // this wallet's payout and its contribution for every partnership, asked
+      // together so multicall can fold them into a single call.
+      const [reads, payouts, contributions] = await Promise.all([
+        Promise.all(
+          ids.map(id =>
+            client.readContract({ abi: deskAbi, address: desk, functionName: "partnerships", args: [BigInt(id)] })
           )
-        : ids.map(() => 0n)
-      const contributions = address
-        ? await Promise.all(
-            ids.map(id =>
-              client.readContract({
-                abi: deskAbi,
-                address: desk,
-                functionName: "contributions",
-                args: [BigInt(id), address]
-              })
+        ),
+        address
+          ? Promise.all(
+              ids.map(id =>
+                client.readContract({
+                  abi: deskAbi,
+                  address: desk,
+                  functionName: "funderPayoutOf",
+                  args: [BigInt(id), address]
+                })
+              )
             )
-          )
-        : ids.map(() => 0n)
+          : Promise.resolve(ids.map(() => 0n)),
+        address
+          ? Promise.all(
+              ids.map(id =>
+                client.readContract({
+                  abi: deskAbi,
+                  address: desk,
+                  functionName: "contributions",
+                  args: [BigInt(id), address]
+                })
+              )
+            )
+          : Promise.resolve(ids.map(() => 0n))
+      ])
       if (cancelled) return
       setRows(
         ids.map(id => ({
@@ -107,12 +119,14 @@ function LivePartnerships() {
         }))
       )
       setLoaded(true)
+      reportReadSuccess()
     }
-    load()
-    const interval = setInterval(load, 15000)
+    const run = () => load().catch(() => reportReadFailure())
+    run()
+    refresh.current = run
     return () => {
       cancelled = true
-      clearInterval(interval)
+      refresh.current = undefined
     }
   }, [client, address, receipt.isSuccess])
 

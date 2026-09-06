@@ -1,10 +1,12 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useAccount, usePublicClient } from "wagmi"
 import { AssetMark, HealthBadge, HealthBar, PageHeader, Panel, Stat, UsdgMark } from "@/components/ui"
 import { demoPositions, maxLtvFor, passport, usd } from "@/lib/demo"
+import { reportReadFailure, reportReadSuccess } from "@/lib/health"
+import { useVisibleInterval } from "@/lib/polling"
 import { distanceToLiquidation, healthStateOf, liquidationPrice1e18, priceToNumber } from "@/lib/risk"
 import { ONE_1E18, erc8056Abi, fromUsdgUnits, isLive, liveAssets, poolAddress, safixPoolAbi, uiTokenAmount } from "@/lib/safix"
 
@@ -87,6 +89,11 @@ function PositionLine({ row }: { row: PositionRow }) {
 function LiveDashboard() {
   const { address } = useAccount()
   const client = usePublicClient()
+  // The periodic refresh runs only while the tab is on screen; see
+  // useVisibleInterval. `load` is held in a ref so the interval survives the
+  // effect being torn down and rebuilt on every account change.
+  const refresh = useRef<(() => void) | undefined>(undefined)
+  useVisibleInterval(() => refresh.current?.())
   const [rows, setRows] = useState<PositionRow[]>([])
   const [deposit, setDeposit] = useState(0)
   const [loaded, setLoaded] = useState(false)
@@ -101,16 +108,44 @@ function LiveDashboard() {
         setLoaded(Boolean(address))
         return
       }
-      const positionReads = await Promise.all(
-        liveAssets.map(asset =>
-          client.readContract({
-            abi: safixPoolAbi,
-            address: pool,
-            functionName: "positions",
-            args: [address, asset.address]
-          })
+      // Everything that does not depend on another read goes out together, so
+      // multicall folds it into one call. Only the collateral values have to
+      // wait, because they are asked per position size.
+      const [positionReads, configReads, priceReads, compounded, multipliers] = await Promise.all([
+        Promise.all(
+          liveAssets.map(asset =>
+            client.readContract({
+              abi: safixPoolAbi,
+              address: pool,
+              functionName: "positions",
+              args: [address, asset.address]
+            })
+          )
+        ),
+        Promise.all(
+          liveAssets.map(asset =>
+            client.readContract({ abi: safixPoolAbi, address: pool, functionName: "assetConfig", args: [asset.address] })
+          )
+        ),
+        Promise.all(
+          liveAssets.map(asset =>
+            client.readContract({ abi: safixPoolAbi, address: pool, functionName: "currentPrice", args: [asset.address] })
+          )
+        ),
+        client.readContract({
+          abi: safixPoolAbi,
+          address: pool,
+          functionName: "compoundedDepositOf",
+          args: [address]
+        }),
+        Promise.all(
+          liveAssets.map(asset =>
+            client
+              .readContract({ abi: erc8056Abi, address: asset.address, functionName: "uiMultiplier" })
+              .catch(() => ONE_1E18)
+          )
         )
-      )
+      ])
       const valueReads = await Promise.all(
         liveAssets.map((asset, index) =>
           client.readContract({
@@ -119,31 +154,6 @@ function LiveDashboard() {
             functionName: "collateralValueStable",
             args: [asset.address, positionReads[index][0]]
           })
-        )
-      )
-      // Health is meaningless without the asset's own liquidation threshold, and
-      // the liquidation price cannot be stated without the price the pool uses.
-      const configReads = await Promise.all(
-        liveAssets.map(asset =>
-          client.readContract({ abi: safixPoolAbi, address: pool, functionName: "assetConfig", args: [asset.address] })
-        )
-      )
-      const priceReads = await Promise.all(
-        liveAssets.map(asset =>
-          client.readContract({ abi: safixPoolAbi, address: pool, functionName: "currentPrice", args: [asset.address] })
-        )
-      )
-      const compounded = await client.readContract({
-        abi: safixPoolAbi,
-        address: pool,
-        functionName: "compoundedDepositOf",
-        args: [address]
-      })
-      const multipliers = await Promise.all(
-        liveAssets.map(asset =>
-          client
-            .readContract({ abi: erc8056Abi, address: asset.address, functionName: "uiMultiplier" })
-            .catch(() => ONE_1E18)
         )
       )
       if (cancelled) return
@@ -167,12 +177,16 @@ function LiveDashboard() {
       )
       setDeposit(fromUsdgUnits(compounded))
       setLoaded(true)
+      reportReadSuccess()
     }
-    load()
-    const interval = setInterval(load, 15000)
+    // A read that throws here would otherwise leave the screen loading for
+    // ever, with nothing saying why.
+    const run = () => load().catch(() => reportReadFailure())
+    run()
+    refresh.current = run
     return () => {
       cancelled = true
-      clearInterval(interval)
+      refresh.current = undefined
     }
   }, [client, address])
 

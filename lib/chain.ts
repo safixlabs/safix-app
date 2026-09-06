@@ -12,6 +12,11 @@ export const robinhood = defineChain({
   },
   blockExplorers: {
     default: { name: "Blockscout", url: "https://robinhoodchain.blockscout.com" }
+  },
+  contracts: {
+    // Canonical Multicall3, deployed at the same address on both chains. It is
+    // what lets a screen's reads leave as one call instead of a dozen.
+    multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11" as const }
   }
 })
 
@@ -28,6 +33,11 @@ export const robinhoodTestnet = defineChain({
   },
   blockExplorers: {
     default: { name: "Blockscout", url: "https://explorer.testnet.chain.robinhood.com" }
+  },
+  contracts: {
+    // Canonical Multicall3, deployed at the same address on both chains. It is
+    // what lets a screen's reads leave as one call instead of a dozen.
+    multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11" as const }
   }
 })
 
