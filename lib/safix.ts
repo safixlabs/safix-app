@@ -16,6 +16,18 @@ export const liveAssets = [
 
 export const isLive = Boolean(poolAddress && usdgAddress)
 
+/**
+ * Rounds down to `decimals` places.
+ *
+ * A ceiling must never be rounded up past itself: prefilling "the most you can
+ * draw" with a value the protocol will reject turns the maximum into an error
+ * message. `toFixed` rounds half away from zero and does exactly that.
+ */
+export const floorTo = (value: number, decimals: number) => {
+  const factor = 10 ** decimals
+  return Math.floor(value * factor) / factor
+}
+
 export const usdgUnits = (value: number) => BigInt(Math.round(value * 1e6))
 export const fromUsdgUnits = (value: bigint) => Number(value) / 1e6
 export const fromTokenUnits = (value: bigint) => Number(value) / 1e18
@@ -42,6 +54,38 @@ export const safixPoolAbi = [
   { type: "function", name: "collateralValueStable", stateMutability: "view", inputs: [{ name: "asset", type: "address" }, { name: "amount", type: "uint256" }], outputs: [{ type: "uint256" }] },
   { type: "function", name: "isLiquidatable", stateMutability: "view", inputs: [{ name: "borrower", type: "address" }, { name: "asset", type: "address" }], outputs: [{ type: "bool" }] }
 ] as const
+
+/**
+ * `Liquidated` carries the borrower, the asset and the caller as indexed
+ * topics, which is what makes a per-wallet history readable straight from the
+ * node with no index in front of it.
+ */
+export const liquidatedEvent = {
+  type: "event",
+  name: "Liquidated",
+  inputs: [
+    { name: "borrower", type: "address", indexed: true },
+    { name: "asset", type: "address", indexed: true },
+    { name: "caller", type: "address", indexed: true },
+    { name: "debtOffset", type: "uint256", indexed: false },
+    { name: "collateralSeized", type: "uint256", indexed: false }
+  ]
+} as const
+
+/**
+ * Block the pool was deployed at. Log queries start here rather than at zero
+ * when it is configured; the node accepts either, this only saves it work.
+ */
+export const deployBlock = (() => {
+  const raw = process.env.NEXT_PUBLIC_DEPLOY_BLOCK?.trim()
+  if (!raw) return 0n
+  try {
+    const parsed = BigInt(raw)
+    return parsed >= 0n ? parsed : 0n
+  } catch {
+    return 0n
+  }
+})()
 
 export const erc8056Abi = [
   { type: "function", name: "uiMultiplier", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] }

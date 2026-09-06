@@ -3,21 +3,91 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useAccount, usePublicClient } from "wagmi"
-import { AssetMark, HealthBar, PageHeader, Panel, Stat, UsdgMark } from "@/components/ui"
+import { AssetMark, HealthBadge, HealthBar, PageHeader, Panel, Stat, UsdgMark } from "@/components/ui"
 import { demoPositions, maxLtvFor, passport, usd } from "@/lib/demo"
+import { distanceToLiquidation, healthStateOf, liquidationPrice1e18, priceToNumber } from "@/lib/risk"
 import { ONE_1E18, erc8056Abi, fromUsdgUnits, isLive, liveAssets, poolAddress, safixPoolAbi, uiTokenAmount } from "@/lib/safix"
 
-type LiveRow = {
+type PositionRow = {
   symbol: string
   locked: number
   value: number
   debt: number
+  /** Current collateral price, as the pool values it. */
+  price: number
+  /** The price at which this position becomes liquidatable. */
+  liquidationPrice: number
+  /** The asset's own threshold. Health means nothing without it. */
+  liqThresholdBps: number
+}
+
+const price = (value: number) => usd(value, value >= 100 ? 2 : 4)
+
+function PositionLine({ row }: { row: PositionRow }) {
+  const health = row.debt > 0 ? row.value / row.debt : 0
+  const hasDebt = row.debt > 0
+  const room = hasDebt ? distanceToLiquidation(health, row.liqThresholdBps) : 0
+  // Once the price is already through the liquidation level there is no fall
+  // left to quote, and quoting "0.0% away" reads as if there were room.
+  const past = hasDebt && healthStateOf(health, row.liqThresholdBps, true) === "liquidatable"
+
+  return (
+    <li className="flex flex-col gap-3 py-4">
+      <div className="grid grid-cols-2 items-center gap-3 sm:grid-cols-4">
+        <div className="flex items-center gap-3">
+          <AssetMark symbol={row.symbol} className="h-9 w-9" />
+          <div>
+            <p className="text-[15px] font-semibold tracking-[-0.01em] text-fog">{row.symbol}</p>
+            <p className="mt-1 text-[12px] tracking-[-0.02em] text-haze">{row.locked.toFixed(4)} locked</p>
+          </div>
+        </div>
+        <div>
+          <p className="text-[12px] tracking-[-0.02em] text-haze">Value</p>
+          <p className="mt-1 text-[14px] text-mist [font-variant-numeric:tabular-nums]">{usd(row.value)}</p>
+        </div>
+        <div>
+          <p className="text-[12px] tracking-[-0.02em] text-haze">Debt</p>
+          <p className="mt-1 text-[14px] text-mist [font-variant-numeric:tabular-nums]">{usd(row.debt)}</p>
+        </div>
+        {hasDebt ? (
+          <div className="flex flex-col items-start gap-2">
+            <HealthBadge health={health} liqThresholdBps={row.liqThresholdBps} hasDebt />
+            <HealthBar ratio={health} liqThresholdBps={row.liqThresholdBps} hasDebt />
+          </div>
+        ) : (
+          <span className="text-[13px] text-haze">No debt</span>
+        )}
+      </div>
+
+      {hasDebt ? (
+        <p className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[12.5px] tracking-[-0.02em] text-haze">
+          <span>
+            {row.symbol} now{" "}
+            <span className="text-mist [font-variant-numeric:tabular-nums]">{price(row.price)}</span>
+          </span>
+          <span>
+            liquidates at{" "}
+            <span className="text-mist [font-variant-numeric:tabular-nums]">{price(row.liquidationPrice)}</span>
+          </span>
+          {past ? (
+            <span className="text-danger">already past it</span>
+          ) : (
+            <span>
+              a{" "}
+              <span className="text-mist [font-variant-numeric:tabular-nums]">{(room * 100).toFixed(1)}%</span> fall
+              away
+            </span>
+          )}
+        </p>
+      ) : null}
+    </li>
+  )
 }
 
 function LiveDashboard() {
   const { address } = useAccount()
   const client = usePublicClient()
-  const [rows, setRows] = useState<LiveRow[]>([])
+  const [rows, setRows] = useState<PositionRow[]>([])
   const [deposit, setDeposit] = useState(0)
   const [loaded, setLoaded] = useState(false)
 
@@ -51,6 +121,18 @@ function LiveDashboard() {
           })
         )
       )
+      // Health is meaningless without the asset's own liquidation threshold, and
+      // the liquidation price cannot be stated without the price the pool uses.
+      const configReads = await Promise.all(
+        liveAssets.map(asset =>
+          client.readContract({ abi: safixPoolAbi, address: pool, functionName: "assetConfig", args: [asset.address] })
+        )
+      )
+      const priceReads = await Promise.all(
+        liveAssets.map(asset =>
+          client.readContract({ abi: safixPoolAbi, address: pool, functionName: "currentPrice", args: [asset.address] })
+        )
+      )
       const compounded = await client.readContract({
         abi: safixPoolAbi,
         address: pool,
@@ -67,12 +149,20 @@ function LiveDashboard() {
       if (cancelled) return
       setRows(
         liveAssets
-          .map((asset, index) => ({
-            symbol: asset.symbol,
-            locked: uiTokenAmount(positionReads[index][0], multipliers[index]),
-            value: fromUsdgUnits(valueReads[index]),
-            debt: fromUsdgUnits(positionReads[index][1])
-          }))
+          .map((asset, index) => {
+            const collateral = positionReads[index][0]
+            const debt = positionReads[index][1]
+            const liqThresholdBps = configReads[index][2]
+            return {
+              symbol: asset.symbol,
+              locked: uiTokenAmount(collateral, multipliers[index]),
+              value: fromUsdgUnits(valueReads[index]),
+              debt: fromUsdgUnits(debt),
+              price: priceToNumber(priceReads[index][0]),
+              liquidationPrice: priceToNumber(liquidationPrice1e18(debt, collateral, liqThresholdBps)),
+              liqThresholdBps
+            }
+          })
           .filter(row => row.locked > 0 || row.debt > 0)
       )
       setDeposit(fromUsdgUnits(compounded))
@@ -118,24 +208,7 @@ function LiveDashboard() {
         ) : (
           <ul className="flex flex-col divide-y divide-line">
             {rows.map(row => (
-              <li key={row.symbol} className="grid grid-cols-2 items-center gap-3 py-4 sm:grid-cols-4">
-                <div className="flex items-center gap-3">
-                  <AssetMark symbol={row.symbol} className="h-9 w-9" />
-                  <div>
-                    <p className="text-[15px] font-semibold tracking-[-0.01em] text-fog">{row.symbol}</p>
-                    <p className="mt-1 text-[12px] tracking-[-0.02em] text-haze">{row.locked.toFixed(4)} locked</p>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[12px] tracking-[-0.02em] text-haze">Value</p>
-                  <p className="mt-1 text-[14px] text-mist [font-variant-numeric:tabular-nums]">{usd(row.value)}</p>
-                </div>
-                <div>
-                  <p className="text-[12px] tracking-[-0.02em] text-haze">Debt</p>
-                  <p className="mt-1 text-[14px] text-mist [font-variant-numeric:tabular-nums]">{usd(row.debt)}</p>
-                </div>
-                {row.debt > 0 ? <HealthBar ratio={row.value / row.debt} /> : <span className="text-[13px] text-haze">No debt</span>}
-              </li>
+              <PositionLine key={row.symbol} row={row} />
             ))}
           </ul>
         )}
@@ -153,6 +226,22 @@ function DemoDashboard() {
   )
   const availableCredit = Math.max(0, capacity - totalDebt)
 
+  const rows: PositionRow[] = demoPositions.map(position => {
+    const liqThresholdBps = Math.round((maxLtvFor(position.symbol) + 0.1) * 10_000)
+    const unitPrice = position.locked > 0 ? position.value / position.locked : 0
+    const liquidationPrice =
+      position.locked > 0 ? (position.debt * 10_000) / (position.locked * liqThresholdBps) : 0
+    return {
+      symbol: position.symbol,
+      locked: position.locked,
+      value: position.value,
+      debt: position.debt,
+      price: unitPrice,
+      liquidationPrice,
+      liqThresholdBps
+    }
+  })
+
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -164,25 +253,8 @@ function DemoDashboard() {
 
       <Panel title="Positions">
         <ul className="flex flex-col divide-y divide-line">
-          {demoPositions.map(position => (
-            <li key={position.id} className="grid grid-cols-2 items-center gap-3 py-4 sm:grid-cols-4">
-              <div className="flex items-center gap-3">
-                <AssetMark symbol={position.symbol} className="h-9 w-9" />
-                <div>
-                  <p className="text-[15px] font-semibold tracking-[-0.01em] text-fog">{position.symbol}</p>
-                  <p className="mt-1 text-[12px] tracking-[-0.02em] text-haze">{position.locked} locked</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-[12px] tracking-[-0.02em] text-haze">Value</p>
-                <p className="mt-1 text-[14px] text-mist [font-variant-numeric:tabular-nums]">{usd(position.value)}</p>
-              </div>
-              <div>
-                <p className="text-[12px] tracking-[-0.02em] text-haze">Debt</p>
-                <p className="mt-1 text-[14px] text-mist [font-variant-numeric:tabular-nums]">{usd(position.debt)}</p>
-              </div>
-              <HealthBar ratio={position.value / position.debt} />
-            </li>
+          {rows.map(row => (
+            <PositionLine key={row.symbol} row={row} />
           ))}
         </ul>
       </Panel>

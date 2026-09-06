@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useAccount, useReadContract, useReadContracts, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
+import LiquidationHistory from "@/components/LiquidationHistory"
 import { TxToast } from "@/components/TxToast"
 import {
   AmountField,
@@ -17,12 +18,13 @@ import {
   Usdg,
   UsdgMark
 } from "@/components/ui"
-import { collateralAssets, originationFeeRate, usd } from "@/lib/demo"
+import { collateralAssets, originationFeeRate, redemptionFeeRate, usd } from "@/lib/demo"
 import { humanError } from "@/lib/errors"
 import { dropToLiquidation, healthStateOf, liquidationPrice1e18, priceToNumber } from "@/lib/risk"
 import {
   erc20Abi,
   erc8056Abi,
+  floorTo,
   fromUsdgUnits,
   isLive,
   liveAssets,
@@ -177,11 +179,18 @@ function LiveBorrow() {
     return Number.isFinite(parsed) && parsed > 0 ? usdgUnits(parsed) : 0n
   }, [repayAmount])
 
+  // Three things cap a draw: the asset's own LTV, the origination fee that rides
+  // on top of whatever is drawn, and the idle liquidity in the pool. The fee is
+  // folded into the collateral ceiling because it is charged on the amount, so
+  // what is left to compare is collateral against liquidity.
   const maxDrawByCapacity = (headroom * 10_000n) / (10_000n + feeBps)
   const maxDraw = maxDrawByCapacity < availableLiquidity ? maxDrawByCapacity : availableLiquidity
   const limitedByLiquidity = maxDrawByCapacity > availableLiquidity
+  const binding: "collateral" | "liquidity" | "none" =
+    maxDraw === 0n ? "none" : limitedByLiquidity ? "liquidity" : "collateral"
 
   const fee = (drawUnits * feeBps) / 10_000n
+  const redemptionOnDraw = (drawUnits * redeemBps) / 10_000n
   const debtAfter = debt + drawUnits + fee
   const overCapacity = drawUnits > 0n && debtAfter > capacity
   const overLiquidity = drawUnits > availableLiquidity
@@ -330,14 +339,45 @@ function LiveBorrow() {
             liquidationPrice={liqNow}
             symbol={asset?.symbol}
           />
+
+          <LiquidationHistory />
         </div>
 
         <div className="flex flex-col gap-4">
           <Panel title={<><UsdgMark className="h-[18px] w-[18px]" />Draw USDG</>}>
             <div className="flex flex-col gap-4">
-              <div className="flex items-baseline justify-between text-[12.5px] tracking-[-0.02em] text-haze">
-                <span>Available to draw</span>
-                <span className="text-mist [font-variant-numeric:tabular-nums]">{usd(fromUsdgUnits(maxDraw))}</span>
+              <div className="flex flex-col gap-2.5 rounded-[3px] border border-line bg-carbon/30 p-3.5">
+                <div className="flex items-baseline justify-between text-[13.5px] tracking-[-0.01em]">
+                  <span className="text-fog">Available to draw</span>
+                  <span className="font-semibold text-fog [font-variant-numeric:tabular-nums]">
+                    {usd(floorTo(fromUsdgUnits(maxDraw), 2))}
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between text-[12.5px] tracking-[-0.02em]">
+                  <span className={binding === "collateral" ? "text-mist" : "text-haze"}>
+                    Your collateral, capped at {Number(maxLtvBps) / 100}% LTV
+                  </span>
+                  <span className="text-haze [font-variant-numeric:tabular-nums]">
+                    {usd(floorTo(fromUsdgUnits(maxDrawByCapacity), 2))}
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between text-[12.5px] tracking-[-0.02em]">
+                  <span className={binding === "liquidity" ? "text-mist" : "text-haze"}>
+                    Idle in the pool
+                  </span>
+                  <span className="text-haze [font-variant-numeric:tabular-nums]">
+                    {usd(fromUsdgUnits(availableLiquidity))}
+                  </span>
+                </div>
+                <p className="text-[12px] leading-[1.5] tracking-[-0.02em] text-haze">
+                  {binding === "liquidity"
+                    ? "The pool is the tighter of the two right now, so that is the ceiling."
+                    : binding === "collateral"
+                      ? "Your collateral is the tighter of the two, so that is the ceiling. Lock more to raise it."
+                      : collateral === 0n
+                        ? "Lock collateral above to open a line of credit."
+                        : "This collateral is already drawn to its limit. Repay, or lock more, to draw again."}
+                </p>
               </div>
               <AmountField
                 inputMode="decimal"
@@ -350,14 +390,22 @@ function LiveBorrow() {
               />
               <QuickAmounts
                 onPick={fraction => {
-                  setDrawAmount((fromUsdgUnits(maxDraw) * fraction).toFixed(2))
+                  setDrawAmount(floorTo(fromUsdgUnits(maxDraw) * fraction, 2).toFixed(2))
                   setAcceptedRisk(false)
                 }}
                 disabled={maxDraw === 0n}
               />
 
               <div className="flex flex-col divide-y divide-line border-y border-line">
-                <SummaryRow label={`One-time fee (${Number(feeBps) / 100}%)`} value={usd(fromUsdgUnits(fee))} />
+                <SummaryRow
+                  label={`One-time fee now (${Number(feeBps) / 100}%)`}
+                  value={usd(fromUsdgUnits(fee))}
+                />
+                <SummaryRow
+                  label={`Redemption fee at close (${Number(redeemBps) / 100}%)`}
+                  value={usd(fromUsdgUnits(redemptionOnDraw))}
+                />
+                <SummaryRow label="Interest" value="None, ever" />
                 <SummaryRow label="Debt after draw" value={usd(fromUsdgUnits(debtAfter))} />
                 <SummaryRow
                   label="Liquidation price after"
@@ -372,13 +420,6 @@ function LiveBorrow() {
                   )}
                 </div>
               </div>
-
-              {limitedByLiquidity && maxDraw > 0n ? (
-                <p className="text-[12.5px] leading-[1.5] tracking-[-0.02em] text-haze">
-                  Your collateral supports more, but the pool only has {usd(fromUsdgUnits(availableLiquidity))} idle
-                  right now.
-                </p>
-              ) : null}
 
               {needsAcknowledgement ? (
                 <label className="flex cursor-pointer items-start gap-2.5 rounded-[3px] border border-amber/60 bg-carbon/40 p-3 text-[12.5px] leading-[1.5] tracking-[-0.01em] text-mist">
@@ -540,7 +581,15 @@ function DemoBorrow() {
 
           <div className="flex flex-col divide-y divide-line border-y border-line">
             <SummaryRow label="Collateral locked" value={`${asset.balance} ${asset.symbol} · ${usd(collateralValue)}`} />
-            <SummaryRow label="One-time fee (0.5%)" value={usd(fee)} />
+            <SummaryRow
+              label={`One-time fee now (${(originationFeeRate * 100).toFixed(1)}%)`}
+              value={usd(fee)}
+            />
+            <SummaryRow
+              label={`Redemption fee at close (${(redemptionFeeRate * 100).toFixed(1)}%)`}
+              value={usd(draw * redemptionFeeRate)}
+            />
+            <SummaryRow label="Interest" value="None, ever" />
             <SummaryRow label="Debt after draw" value={usd(debtAfter)} />
             <SummaryRow label="Liquidation price after" value={debtAfter > 0 ? price(liqAfter) : "No debt"} />
             <div className="flex items-center justify-between gap-4 py-2.5 text-[13.5px] tracking-[-0.01em]">
