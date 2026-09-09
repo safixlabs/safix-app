@@ -2,6 +2,7 @@
 
 @theme inline {
   --color-carbon: var(--surface-canvas);
+  --color-chip: var(--surface-chip);
   --color-panel: var(--surface-panel);
   --color-teal-deep: var(--surface-accent);
   --color-mint: var(--accent);
@@ -23,6 +24,9 @@
 :root {
   color-scheme: dark;
   --surface-canvas: #070c0c;
+  /* The one surface that does not follow the theme. Equity marks are mostly dark ink on
+     transparency, so a chip that goes dark takes the logo with it. */
+  --surface-chip: #f2f5f4;
   --surface-panel: #0d1615;
   --surface-accent: #02252b;
   --accent: #10e7c0;

@@ -47,7 +47,11 @@ export function AssetMark({
     )
   }
   return (
-    <span className={`flex shrink-0 items-center justify-center overflow-hidden rounded-[3px] bg-carbon ${className}`}>
+    // Most equity marks are dark ink on transparency, so the chip is light in both themes: on the
+    // dark canvas a dark logo would otherwise disappear entirely.
+    <span
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-[3px] border border-line bg-chip p-[3px] ${className}`}
+    >
       <img
         src={assetIconSrc(symbol)}
         alt={label ?? ""}

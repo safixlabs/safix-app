@@ -4,6 +4,7 @@ export const appLinks = [
   { href: "/pool/", title: "Pool" },
   { href: "/partnerships/", title: "Partnerships" },
   { href: "/passport/", title: "Passport" },
+  { href: "/assets/", title: "Assets" },
   { href: "/activity/", title: "Activity" }
 ]
 

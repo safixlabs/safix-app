@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test"
 import type { Page } from "@playwright/test"
 
-const screens = ["/", "/borrow/", "/pool/", "/partnerships/", "/passport/", "/risk/", "/terms/"]
+const screens = ["/", "/borrow/", "/pool/", "/partnerships/", "/passport/", "/assets/", "/risk/", "/terms/"]
 
 const widths = [
   { name: "360 · small phone", width: 360, height: 780 },
