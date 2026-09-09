@@ -3,7 +3,8 @@ export const appLinks = [
   { href: "/borrow/", title: "Borrow" },
   { href: "/pool/", title: "Pool" },
   { href: "/partnerships/", title: "Partnerships" },
-  { href: "/passport/", title: "Passport" }
+  { href: "/passport/", title: "Passport" },
+  { href: "/activity/", title: "Activity" }
 ]
 
 /** Reachable outside the primary navigation, and linked from the footer. */
