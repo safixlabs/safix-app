@@ -40,7 +40,7 @@ export function AssetMark({
         role={label ? "img" : undefined}
         aria-label={label}
         aria-hidden={label ? undefined : true}
-        className={`flex shrink-0 items-center justify-center rounded-[3px] border border-line bg-carbon text-[10px] font-semibold tracking-[-0.01em] text-mist ${className}`}
+        className={`flex shrink-0 items-center justify-center rounded-full border border-line bg-carbon text-[10px] font-semibold tracking-[-0.01em] text-mist ${className}`}
       >
         {assetInitials(symbol)}
       </span>
@@ -50,13 +50,13 @@ export function AssetMark({
     // Most equity marks are dark ink on transparency, so the chip is light in both themes: on the
     // dark canvas a dark logo would otherwise disappear entirely.
     <span
-      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-[3px] border border-line bg-chip p-[3px] ${className}`}
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-chip p-[3px] ${className}`}
     >
       <img
         src={assetIconSrc(symbol)}
         alt={label ?? ""}
         onError={() => setFailed(true)}
-        className="h-full w-full object-contain"
+        className="h-full w-full rounded-full object-contain"
       />
     </span>
   )
