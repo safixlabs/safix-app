@@ -13,7 +13,9 @@
     "build:icons": "node scripts/build-icons.mjs",
     "build:config": "node scripts/build-vercel-config.mjs",
     "build:assets": "npm run build:og && npm run build:icons && npm run build:config",
-    "check:site": "node scripts/check-site.mjs"
+    "check:site": "node scripts/check-site.mjs",
+    "build:security": "node scripts/build-security.mjs",
+    "check:security": "node scripts/check-security.mjs"
   },
   "dependencies": {
     "@coinbase/wallet-sdk": "^4.3.7",

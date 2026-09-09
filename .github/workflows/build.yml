@@ -16,6 +16,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check:site
+      # SECURITY.md is generated from security.config.json and must not be
+      # edited by hand.
+      - run: npm run check:security
       - run: npm run build
         env:
           # The release ties uploaded source maps to the events the app reports.
