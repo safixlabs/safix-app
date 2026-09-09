@@ -8,7 +8,12 @@
     "e2e": "playwright test e2e/interface.spec.ts e2e/visual.spec.ts e2e/a11y.spec.ts",
     "e2e:live": "node scripts/e2e-chain.mjs",
     "e2e:update-snapshots": "playwright test e2e/visual.spec.ts --update-snapshots",
-    "contrast": "node scripts/contrast.mjs"
+    "contrast": "node scripts/contrast.mjs",
+    "build:og": "node scripts/build-og.mjs",
+    "build:icons": "node scripts/build-icons.mjs",
+    "build:config": "node scripts/build-vercel-config.mjs",
+    "build:assets": "npm run build:og && npm run build:icons && npm run build:config",
+    "check:site": "node scripts/check-site.mjs"
   },
   "dependencies": {
     "@coinbase/wallet-sdk": "^4.3.7",

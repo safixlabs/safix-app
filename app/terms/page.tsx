@@ -1,7 +1,10 @@
-import type { Metadata } from "next"
 import { PageHeader, Panel } from "@/components/ui"
+import { pageMetadata } from "@/lib/metadata"
 
-export const metadata: Metadata = { title: "Terms" }
+export const metadata = pageMetadata(
+  "/terms/",
+  "The rules that apply when you use the Safix interface. Short, and written to be read."
+)
 
 const sections = [
   {

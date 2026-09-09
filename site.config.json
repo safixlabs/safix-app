@@ -1,0 +1,27 @@
+{
+  "$comment": "The structure decided for the three Safix surfaces: marketing at the apex, app and docs on subdomains. Set `domain` once the apex is registered and every surface, every cross-link, every canonical URL and every social preview follows from it. Until then each surface keeps the generated hostname recorded in `currentUrl`. NEXT_PUBLIC_SAFIX_DOMAIN overrides `domain` at build time.",
+  "domain": null,
+  "surfaces": {
+    "marketing": {
+      "name": "Safix",
+      "role": "Marketing site",
+      "subdomain": null,
+      "currentUrl": null,
+      "description": "Private credit for tokenized stocks and real-world assets."
+    },
+    "app": {
+      "name": "Safix app",
+      "role": "Application",
+      "subdomain": "app",
+      "currentUrl": "https://safix-app.vercel.app",
+      "description": "Borrow USDG against tokenized assets at zero interest, provide liquidity to the stability pool, and manage the private credit passport."
+    },
+    "docs": {
+      "name": "Safix documentation",
+      "role": "Documentation",
+      "subdomain": "docs",
+      "currentUrl": "https://safix-docs.vercel.app",
+      "description": "Safix is a private credit network for tokenized stocks and real-world assets. Borrow stablecoins against your investments without selling them or exposing your portfolio."
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import Link from "next/link"
 import type { ReactNode } from "react"
 import { DM_Sans } from "next/font/google"
@@ -8,19 +8,49 @@ import RpcNotice from "@/components/RpcNotice"
 import Telemetry from "@/components/Telemetry"
 import TopNav from "@/components/TopNav"
 import Providers from "./providers"
+import { legalLinks } from "@/components/nav"
+import { absolute, allSurfaces, baseUrl, self } from "@/lib/site"
 
 const sans = DM_Sans({
   subsets: ["latin"],
   variable: "--font-sans-src"
 })
 
+const surface = self()
+
 export const metadata: Metadata = {
+  metadataBase: new URL(baseUrl()),
   title: {
-    default: "Safix app",
-    template: "%s · Safix app"
+    default: surface.name,
+    template: `%s · ${surface.name}`
   },
-  description:
-    "Borrow USDG against tokenized assets at zero interest, provide liquidity to the stability pool, and manage your private credit passport."
+  description: surface.description,
+  applicationName: surface.name,
+  alternates: { canonical: "/" },
+  manifest: "/manifest.webmanifest",
+  robots: { index: true, follow: true },
+  openGraph: {
+    type: "website",
+    siteName: surface.name,
+    url: absolute("/"),
+    title: surface.name,
+    description: surface.description,
+    locale: "en_US",
+    images: [{ url: "/og/index.png", width: 1200, height: 630, alt: surface.name }]
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: surface.name,
+    description: surface.description,
+    images: ["/og/index.png"]
+  }
+}
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#070c0c" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f8f7" }
+  ]
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -51,19 +81,27 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </Providers>
         <footer className="mx-auto flex w-full max-w-[1120px] flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-t border-line px-6 pb-8 pt-6 text-[12px] tracking-[-0.02em] text-haze">
           <span>Safix</span>
-          <nav aria-label="Legal and documentation" className="flex items-center gap-5">
-            <Link href="/risk/" className="-m-1 inline-flex items-center p-1 transition-colors hover:text-mint">
-              Risk
-            </Link>
-            <Link href="/terms/" className="-m-1 inline-flex items-center p-1 transition-colors hover:text-mint">
-              Terms
-            </Link>
-            <a
-              href="https://safix-docs.vercel.app"
-              className="-m-1 inline-flex items-center gap-1 p-1 transition-colors hover:text-mint"
-            >
-              Documentation <span aria-hidden>→</span>
-            </a>
+          <nav aria-label="Legal and other Safix sites" className="flex flex-wrap items-center gap-5">
+            {legalLinks.map(link => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="-m-1 inline-flex items-center p-1 transition-colors hover:text-mint"
+              >
+                {link.title}
+              </Link>
+            ))}
+            {allSurfaces()
+              .filter(other => other.key !== surface.key && other.url !== null)
+              .map(other => (
+                <a
+                  key={other.key}
+                  href={other.url as string}
+                  className="-m-1 inline-flex items-center gap-1 p-1 transition-colors hover:text-mint"
+                >
+                  {other.key === "marketing" ? "Safix" : other.role} <span aria-hidden>→</span>
+                </a>
+              ))}
           </nav>
         </footer>
       </body>

@@ -1,4 +1,12 @@
 import { expect, test } from "@playwright/test"
+import config from "../site.config.json"
+
+const surfaces: Record<string, { role: string; subdomain: string | null; currentUrl: string | null }> =
+  config.surfaces
+const domain = process.env.NEXT_PUBLIC_SAFIX_DOMAIN ?? config.domain
+
+const urlOf = (surface: { subdomain: string | null; currentUrl: string | null }) =>
+  domain ? `https://${surface.subdomain ? `${surface.subdomain}.` : ""}${domain}` : surface.currentUrl
 import type { Locator, Page } from "@playwright/test"
 
 async function clickWhenLive(page: Page, button: Locator, settled: () => Promise<void>) {
@@ -84,5 +92,18 @@ test.describe("interface", () => {
     await page.goto("/")
     await expect(page.getByRole("link", { name: "Risk" })).toBeVisible()
     await expect(page.getByRole("link", { name: "Terms" })).toBeVisible()
+
+    // The cross-links are resolved from site.config.json rather than typed, so
+    // this asserts against the same configuration the app builds from. When the
+    // apex domain is registered, both the app and this test follow it.
+    for (const [key, surface] of Object.entries(surfaces)) {
+      if (key === "app") continue
+      const expected = urlOf(surface)
+      if (!expected) continue
+      const label = key === "marketing" ? "Safix" : surface.role
+      const link = page.getByRole("contentinfo").getByRole("link", { name: new RegExp(`^${label}`) })
+      await expect(link).toBeVisible()
+      await expect(link).toHaveAttribute("href", expected)
+    }
   })
 })

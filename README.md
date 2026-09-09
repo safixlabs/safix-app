@@ -71,6 +71,30 @@ Alerting is configured in Sentry rather than in code: an issue alert on the
 project, firing when the number of events in an hour exceeds its usual level,
 delivered wherever the team reads alerts.
 
+## Domains and the three surfaces
+
+Safix has three surfaces: the marketing site on the apex domain, this app on
+`app.`, and the documentation on `docs.`. That structure lives in
+[`site.config.json`](site.config.json), which is the same file in all three
+repositories.
+
+Registering the domain is a one-value change. Set `domain` in that file (or
+`NEXT_PUBLIC_SAFIX_DOMAIN` at build time) and every canonical URL, `og:url`,
+social preview image, sitemap entry, `robots.txt` host, footer cross-link and the
+redirect from the old hostname follows from it. Until it is set, each surface
+stays on the generated hostname recorded in `currentUrl`, and a surface with no
+address is left unlinked rather than linked to nowhere.
+
+```
+npm run build:assets   # preview images, touch icons and vercel.json
+npm run check:site     # verifies the config and the generated assets agree
+```
+
+`build:og` renders one social preview image per screen into `public/og/` as real
+`.png` files, `build:icons` renders the touch icons onto the carbon canvas
+because iOS and Android ignore transparency, and `build:config` writes
+`vercel.json` including the permanent redirect off the generated hostname.
+
 ## Screens
 
 - Dashboard: collateral value, fixed debt, available credit, passport status, positions with health.

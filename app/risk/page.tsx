@@ -1,7 +1,10 @@
-import type { Metadata } from "next"
 import { PageHeader, Panel } from "@/components/ui"
+import { pageMetadata } from "@/lib/metadata"
 
-export const metadata: Metadata = { title: "Risk" }
+export const metadata = pageMetadata(
+  "/risk/",
+  "What can go wrong when borrowing against tokenized assets on Safix. Read this before connecting a wallet or signing anything."
+)
 
 const risks = [
   {
