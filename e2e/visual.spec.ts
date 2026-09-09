@@ -13,6 +13,7 @@ const screens = [
   { path: "/borrow/", name: "borrow" },
   { path: "/pool/", name: "pool" },
   { path: "/partnerships/", name: "partnerships" },
+  { path: "/assets/", name: "assets" },
   { path: "/passport/", name: "passport" },
   { path: "/risk/", name: "risk" },
   { path: "/terms/", name: "terms" }
