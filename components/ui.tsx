@@ -244,8 +244,10 @@ export function GhostButton({
   size = "md",
   className,
   ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & { size?: "sm" | "md" }) {
-  const sizing = size === "sm" ? "px-5 py-2 text-[12.5px]" : "px-5 py-2.5 text-[13px]"
+}: ButtonHTMLAttributes<HTMLButtonElement> & { size?: "xs" | "sm" | "md" }) {
+  // The smallest still clears the 24px target that 2.5.8 asks for.
+  const sizing =
+    size === "xs" ? "min-h-6 px-2.5 py-1 text-[12px]" : size === "sm" ? "px-5 py-2 text-[12.5px]" : "px-5 py-2.5 text-[13px]"
   return (
     <button
       {...rest}

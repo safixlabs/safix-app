@@ -1,7 +1,9 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import type { Address } from "viem"
 import { useAccount, useReadContract, useReadContracts, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
+import { TokenHandle, WalletOffer } from "@/components/AddToWallet"
 import LiquidationHistory from "@/components/LiquidationHistory"
 import { TxToast } from "@/components/TxToast"
 import {
@@ -37,6 +39,7 @@ import {
   usdgAddress,
   usdgUnits
 } from "@/lib/safix"
+import { wasOffered } from "@/lib/wallet-assets"
 
 const tokenUnits = (value: number) => BigInt(Math.round(value * 1e6)) * 10n ** 12n
 
@@ -94,6 +97,10 @@ function LiveBorrow() {
   const [drawAmount, setDrawAmount] = useState("")
   const [repayAmount, setRepayAmount] = useState("")
   const [acceptedRisk, setAcceptedRisk] = useState(false)
+  // The token to offer the wallet once the transaction now in flight confirms,
+  // and the offer itself while it is on screen.
+  const pendingOffer = useRef<Address | undefined>(undefined)
+  const [offer, setOffer] = useState<Address | undefined>(undefined)
 
   const asset = liveAssets[assetIndex]
 
@@ -136,6 +143,9 @@ function LiveBorrow() {
     if (receipt.isSuccess) {
       if (pendingStep.current) track(pendingStep.current, { asset: asset?.symbol })
       pendingStep.current = undefined
+      const token = pendingOffer.current
+      pendingOffer.current = undefined
+      if (token && !wasOffered(token)) setOffer(token)
       poolReads.refetch()
       walletReads.refetch()
       setLockAmount("")
@@ -238,6 +248,9 @@ function LiveBorrow() {
     }
     track("draw_started", { asset: asset.symbol })
     pendingStep.current = "draw_signed"
+    // A draw is the moment USDG first reaches most wallets, and most wallets
+    // will not show it until they are handed the address.
+    pendingOffer.current = usdgAddress
     writeContract({ chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "draw", args: [asset.address, drawUnits] })
   }
 
@@ -263,8 +276,12 @@ function LiveBorrow() {
 
   const mintTestAsset = () => {
     if (!asset || !address) return
+    pendingOffer.current = asset.address
     writeContract({ chainId: activeChain.id, abi: erc20Abi, address: asset.address, functionName: "mint", args: [address, 10n * 10n ** 18n] })
   }
+
+  const offeredAsset = offer ? liveAssets.find(candidate => candidate.address === offer) : undefined
+  const dismissOffer = () => setOffer(undefined)
 
   const drawBlockedReason = overCapacity
     ? "Above what this collateral supports"
@@ -327,6 +344,7 @@ function LiveBorrow() {
                   {tokenAmount(uiTokenAmount(tokenBalance, uiMultiplier.data))} {asset?.symbol}
                 </span>
               </div>
+              {asset ? <TokenHandle address={asset.address} symbol={asset.symbol} /> : null}
               <Field
                 inputMode="decimal"
                 aria-label={`Amount of ${asset?.symbol ?? "collateral"} to lock`}
@@ -345,6 +363,16 @@ function LiveBorrow() {
               <GhostButton size="sm" onClick={mintTestAsset} disabled={busy || !address}>
                 Mint 10 test {asset?.symbol}
               </GhostButton>
+              {offeredAsset ? (
+                <WalletOffer
+                  address={offeredAsset.address}
+                  symbol={offeredAsset.symbol}
+                  // The line above already shows the selected asset's address;
+                  // only a token minted and then deselected needs its own.
+                  showAddress={offeredAsset.address !== asset?.address}
+                  onDone={dismissOffer}
+                />
+              ) : null}
             </div>
           </Panel>
 
@@ -463,6 +491,9 @@ function LiveBorrow() {
               >
                 {busy ? "Confirming…" : drawBlockedReason ?? <span className="inline-flex items-center gap-1.5">Draw <Usdg /></span>}
               </PrimaryButton>
+              {usdgAddress && offer === usdgAddress ? (
+                <WalletOffer address={usdgAddress} symbol="USDG" onDone={dismissOffer} />
+              ) : null}
             </div>
           </Panel>
 

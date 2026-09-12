@@ -16,13 +16,32 @@ const chain = defineChain({
 const installed = new WeakSet<Page>()
 /** Pages whose wallet is currently refusing to sign. */
 const refusing = new WeakSet<Page>()
+/** Pages whose wallet has never heard of `wallet_watchAsset`. */
+const withoutWatchAsset = new WeakSet<Page>()
+/** Every token the app has asked the wallet to list, per page, in order. */
+const watched = new WeakMap<Page, WatchAssetRequest[]>()
+
+export type WatchAssetRequest = {
+  type: string
+  options: { address: string; symbol: string; decimals: number; image?: string }
+}
 
 /**
  * Makes the wallet decline the next signature, as a person does when they read
- * the prompt and change their mind.
+ * the prompt and change their mind. The same refusal answers a request to list
+ * a token.
  */
 export const refuseSignatures = (page: Page) => refusing.add(page)
 export const allowSignatures = (page: Page) => refusing.delete(page)
+
+/**
+ * Makes the wallet one that does not implement `wallet_watchAsset` at all,
+ * which is what a WalletConnect session to an older wallet looks like.
+ */
+export const dropWatchAsset = (page: Page) => withoutWatchAsset.add(page)
+
+/** What the wallet has been asked to list so far. */
+export const watchedAssets = (page: Page) => watched.get(page) ?? []
 
 export type WalletOptions = {
   /** Which anvil account the wallet holds. */
@@ -73,6 +92,25 @@ export async function installWallet(page: Page, options: WalletOptions = {}) {
     })
   })
 
+  // EIP-747. The request is recorded before the wallet answers, so a test can
+  // check what the app asked for whichever way the wallet went.
+  await page.exposeFunction("__e2eWatchAsset", async (request: WatchAssetRequest) => {
+    if (withoutWatchAsset.has(page)) {
+      const error = new Error("The method wallet_watchAsset does not exist / is not available.") as Error & {
+        code?: number
+      }
+      error.code = -32601
+      throw error
+    }
+    watched.set(page, [...watchedAssets(page), request])
+    if (refusing.has(page)) {
+      const error = new Error("User rejected the request.") as Error & { code?: number }
+      error.code = 4001
+      throw error
+    }
+    return true
+  })
+
   await page.addInitScript(
     ({ account, rpc, chainId, acknowledgeRisk }) => {
       const send = async (method: string, params: unknown[]) => {
@@ -101,6 +139,12 @@ export async function installWallet(page: Page, options: WalletOptions = {}) {
             return (window as unknown as {
               __e2eSendTransaction: (tx: Record<string, string>) => Promise<string>
             }).__e2eSendTransaction(request)
+          }
+          if (method === "wallet_watchAsset") {
+            // Not a list: EIP-747 passes the one parameter as an object.
+            return (window as unknown as {
+              __e2eWatchAsset: (request: unknown) => Promise<boolean>
+            }).__e2eWatchAsset(params)
           }
           return send(method, params ?? [])
         },

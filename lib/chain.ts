@@ -62,3 +62,6 @@ const explorers = (activeChain as { blockExplorers?: { default: { url: string } 
 
 export const explorerTxUrl = (hash?: `0x${string}`) =>
   hash && explorers ? `${explorers.default.url}/tx/${hash}` : undefined
+
+export const explorerAddressUrl = (address?: `0x${string}`) =>
+  address && explorers ? `${explorers.default.url}/address/${address}` : undefined

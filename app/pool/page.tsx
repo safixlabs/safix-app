@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useAccount, useReadContract, useReadContracts, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
+import { TokenHandle, WalletOffer } from "@/components/AddToWallet"
 import {
   AmountField,
   AssetMark,
@@ -34,6 +35,7 @@ import {
   usdgAddress,
   usdgUnits
 } from "@/lib/safix"
+import { wasOffered } from "@/lib/wallet-assets"
 
 type Mode = "deposit" | "withdraw"
 type GainRow = { symbol: string; amount: number }
@@ -239,6 +241,10 @@ function LivePool() {
   const { address } = useAccount()
   const [mode, setMode] = useState<Mode>("deposit")
   const [amount, setAmount] = useState("")
+  // Whether the transaction now in flight is one that puts USDG into the
+  // wallet, and whether the offer to list it there is on screen.
+  const pendingOffer = useRef(false)
+  const [offer, setOffer] = useState(false)
 
   // Every read below is pinned to the chain Safix runs on. The wallet's chain
   // decides what it can sign, never which contracts get read: a wallet sitting
@@ -277,6 +283,8 @@ function LivePool() {
     if (receipt.isSuccess) {
       if (pendingStep.current) track(pendingStep.current)
       pendingStep.current = undefined
+      if (pendingOffer.current && usdgAddress && !wasOffered(usdgAddress)) setOffer(true)
+      pendingOffer.current = false
       totals.refetch()
       personal.refetch()
       gains.refetch()
@@ -330,6 +338,7 @@ function LivePool() {
 
   const mintTestUsdg = () => {
     if (!usdgAddress || !address) return
+    pendingOffer.current = true
     writeContract({ chainId: activeChain.id, abi: erc20Abi, address: usdgAddress, functionName: "mint", args: [address, 10_000n * 10n ** 6n] })
   }
 
@@ -377,9 +386,15 @@ function LivePool() {
           }
           note={status}
           extra={
-            <GhostButton size="sm" onClick={mintTestUsdg} disabled={busy || !address}>
-              <span className="inline-flex items-center gap-1.5">Mint 10,000 test <Usdg /></span>
-            </GhostButton>
+            <>
+              <GhostButton size="sm" onClick={mintTestUsdg} disabled={busy || !address}>
+                <span className="inline-flex items-center gap-1.5">Mint 10,000 test <Usdg /></span>
+              </GhostButton>
+              {usdgAddress ? <TokenHandle address={usdgAddress} symbol="USDG" /> : null}
+              {offer && usdgAddress ? (
+                <WalletOffer address={usdgAddress} symbol="USDG" showAddress={false} onDone={() => setOffer(false)} />
+              ) : null}
+            </>
           }
         />
         <div className="flex flex-col gap-4">

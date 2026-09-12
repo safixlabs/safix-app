@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test"
 import type { Address } from "viem"
 import { accounts } from "./deployment"
-import { connect, installWallet, refuseSignatures } from "./wallet"
+import { connect, installWallet, refuseSignatures, watchedAssets } from "./wallet"
 import {
   asAccount,
   balanceOf,
@@ -194,6 +194,27 @@ test.describe.serial("money paths", () => {
     const after = await settles(async () => (await positionOf(borrower, tbill))[1], before)
     expect(after).toBeGreaterThan(before)
     expect(await balanceOf(usdgToken, borrower)).toBeGreaterThan(held)
+
+    // The USDG is in the wallet now, and the wallet is offered its address,
+    // with the symbol and decimals the token itself reports rather than the
+    // name the interface uses for it. On the testnet those differ: the
+    // contract calls itself tUSDG.
+    const [symbol, decimals] = await Promise.all([
+      publicClient.readContract({ abi: erc20Abi, address: usdgToken, functionName: "symbol" }),
+      publicClient.readContract({ abi: erc20Abi, address: usdgToken, functionName: "decimals" })
+    ])
+    const offer = panelOf(page, "Draw USDG").getByRole("status")
+    await expect(offer).toBeVisible({ timeout: 20_000 })
+    await offer.getByRole("button", { name: `Add ${symbol} to wallet` }).click()
+
+    await expect.poll(() => watchedAssets(page).length, { timeout: 10_000 }).toBe(1)
+    const [request] = watchedAssets(page)
+    expect(request.type).toBe("ERC20")
+    expect(request.options.address.toLowerCase()).toBe(usdgToken)
+    expect(request.options.symbol).toBe(symbol)
+    expect(request.options.decimals).toBe(decimals)
+    // Answered, so it is gone. That it is not asked again is the states suite's.
+    await expect(offer).toBeHidden()
   })
 
   test("repay puts USDG back against the debt", async ({ page }) => {

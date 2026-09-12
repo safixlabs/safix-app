@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test"
 import type { Address } from "viem"
 import { accounts } from "./deployment"
-import { connect, installWallet } from "./wallet"
-import { balanceOf, erc20Abi, pool, tgold, usdgToken, waitFor, walletFor } from "./chain"
+import { connect, dropWatchAsset, installWallet, refuseSignatures, watchedAssets } from "./wallet"
+import { balanceOf, erc20Abi, pool, publicClient, tgold, usdgToken, waitFor, walletFor } from "./chain"
 
 const live = process.env.E2E_LIVE === "1"
 const borrower = accounts.borrower.address as Address
@@ -87,5 +87,124 @@ test.describe("states", () => {
     const draw = panel.locator("button.w-full").last()
     await expect(draw).toHaveText(/Above what this collateral supports/)
     await expect(draw).toBeDisabled()
+  })
+})
+
+/**
+ * What the token says it is, read off the chain the same way the app reads it.
+ * On the testnet the USDG contract calls itself tUSDG, which is the point: the
+ * wallet has to be told what the contract says, not what the interface says.
+ */
+const usdgMetadata = async () => {
+  const [symbol, decimals] = await Promise.all([
+    publicClient.readContract({ abi: erc20Abi, address: usdgToken, functionName: "symbol" }),
+    publicClient.readContract({ abi: erc20Abi, address: usdgToken, functionName: "decimals" })
+  ])
+  return { symbol, decimals }
+}
+
+test.describe("adding a token to the wallet", () => {
+  test.skip(!live, "run with npm run e2e:live")
+
+  const liquidity = (page: import("@playwright/test").Page) =>
+    page.locator("section").filter({ hasText: "Manage liquidity" })
+
+  test("the faucet offers the token once, and the quiet control stays", async ({ page }) => {
+    await installWallet(page)
+    const { symbol, decimals } = await usdgMetadata()
+
+    await page.goto("/pool/")
+    await connect(page)
+    const panel = liquidity(page)
+    const offer = panel.getByRole("status")
+    const mint = panel.getByRole("button", { name: /Mint 10,000 test/ })
+
+    // The first mint puts USDG in the wallet, so the offer follows it.
+    await mint.click()
+    await expect(offer).toBeVisible({ timeout: 40_000 })
+    await expect(offer).toContainText(`${symbol} is in your wallet now`)
+    await offer.getByRole("button", { name: "Not now" }).click()
+    await expect(offer).toBeHidden()
+
+    // Answered once is answered. The second mint confirms without it: the
+    // button is busy until the receipt lands, so its coming back means the
+    // screen has seen the confirmation and chosen not to ask.
+    const held = await balanceOf(usdgToken, borrower)
+    await expect(mint).toBeEnabled({ timeout: 30_000 })
+    await mint.click()
+    await expect
+      .poll(async () => (await balanceOf(usdgToken, borrower)) > held, { timeout: 40_000, intervals: [500] })
+      .toBe(true)
+    await expect(mint).toBeEnabled({ timeout: 30_000 })
+    await page.waitForTimeout(500)
+    await expect(offer).toBeHidden()
+
+    // A wallet that already holds the token still has the address and the
+    // control on the panel, and what goes to the wallet is what the contract
+    // answers, not the name the screen uses.
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"])
+    await panel.getByRole("button", { name: `Copy the ${symbol} address` }).click()
+    expect((await page.evaluate(() => navigator.clipboard.readText())).toLowerCase()).toBe(usdgToken)
+
+    await panel.getByRole("button", { name: `Add ${symbol} to wallet` }).click()
+    await expect.poll(() => watchedAssets(page).length, { timeout: 10_000 }).toBe(1)
+    const [request] = watchedAssets(page)
+    expect(request.type).toBe("ERC20")
+    expect(request.options.address.toLowerCase()).toBe(usdgToken)
+    expect(request.options.symbol).toBe(symbol)
+    expect(request.options.decimals).toBe(decimals)
+    expect(request.options.image).toMatch(/^https?:\/\/.+\/usdg\.png$/)
+  })
+
+  test("a wallet that refuses the token changes nothing on screen", async ({ page }) => {
+    await installWallet(page)
+    refuseSignatures(page)
+    const errors: string[] = []
+    page.on("pageerror", error => errors.push(String(error)))
+    const { symbol } = await usdgMetadata()
+
+    await page.goto("/pool/")
+    await connect(page)
+    const panel = liquidity(page)
+    const control = panel.getByRole("button", { name: `Add ${symbol} to wallet` })
+    // A link where the chain has an explorer, plain text where it does not;
+    // the full address is the title either way.
+    const address = panel.locator(`[title="${usdgToken}" i]`)
+    await expect(address).toBeVisible()
+
+    await control.click()
+    await expect.poll(() => watchedAssets(page).length, { timeout: 10_000 }).toBe(1)
+
+    // The wallet said no. Nothing failed, nothing was announced, and the
+    // address never left the screen.
+    await expect(control).toBeEnabled()
+    await expect(address).toBeVisible()
+    await expect(page.getByTestId("tx-status")).toHaveCount(0)
+    // The app's own alert region, not Next's route announcer beside it.
+    await expect(page.locator("#main").getByRole("alert")).toHaveText("")
+    expect(errors).toEqual([])
+  })
+
+  test("a wallet without wallet_watchAsset changes nothing on screen", async ({ page }) => {
+    await installWallet(page)
+    dropWatchAsset(page)
+    const errors: string[] = []
+    page.on("pageerror", error => errors.push(String(error)))
+    const { symbol } = await usdgMetadata()
+
+    await page.goto("/pool/")
+    await connect(page)
+    const panel = liquidity(page)
+    const control = panel.getByRole("button", { name: `Add ${symbol} to wallet` })
+    const address = panel.locator(`[title="${usdgToken}" i]`)
+
+    await control.click()
+    await page.waitForTimeout(1500)
+
+    expect(watchedAssets(page)).toEqual([])
+    await expect(control).toBeEnabled()
+    await expect(address).toBeVisible()
+    await expect(page.getByTestId("tx-status")).toHaveCount(0)
+    expect(errors).toEqual([])
   })
 })
