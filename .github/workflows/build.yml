@@ -75,7 +75,14 @@ jobs:
           cache: npm
       # anvil forks the public testnet, so the contracts under test are the ones
       # really deployed there. No deploy step, and nothing secret in CI.
+      #
+      # The fork cache is not carried between runs. It is keyed by block, and this
+      # chain sits on the same block while nobody sends anything, so a cached run
+      # is read back by the next one: the money paths would then be proven against
+      # a previous run's copy of the chain rather than against the chain.
       - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          cache: false
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e:live
