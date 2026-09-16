@@ -33,7 +33,12 @@ export const poolAbi = [
   { type: "function", name: "liquidate", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "address" }, { type: "uint256" }], outputs: [] },
   { type: "function", name: "deposit", stateMutability: "nonpayable", inputs: [{ type: "uint256" }], outputs: [] },
   { type: "function", name: "lockCollateral", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [] },
-  { type: "function", name: "draw", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [] }
+  { type: "function", name: "draw", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [] },
+  { type: "function", name: "withdraw", stateMutability: "nonpayable", inputs: [{ type: "uint256" }], outputs: [] },
+  { type: "function", name: "minPositionDebt", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "originationFeeBps", stateMutability: "view", inputs: [], outputs: [{ type: "uint16" }] },
+  { type: "function", name: "priceStatus", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint8" }, { type: "uint256" }, { type: "uint256" }] },
+  { type: "function", name: "priceGuards", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint64" }, { type: "uint16" }, { type: "uint256" }, { type: "uint256" }] }
 ] as const
 
 export const erc20Abi = [
@@ -42,7 +47,8 @@ export const erc20Abi = [
   { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
   { type: "function", name: "allowance", stateMutability: "view", inputs: [{ type: "address" }, { type: "address" }], outputs: [{ type: "uint256" }] },
   { type: "function", name: "mint", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [] },
-  { type: "function", name: "approve", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [{ type: "bool" }] }
+  { type: "function", name: "approve", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [{ type: "bool" }] },
+  { type: "function", name: "transferFrom", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "address" }, { type: "uint256" }], outputs: [{ type: "bool" }] }
 ] as const
 
 export const deskAbi = [
@@ -50,7 +56,13 @@ export const deskAbi = [
   { type: "function", name: "contributions", stateMutability: "view", inputs: [{ type: "uint256" }, { type: "address" }], outputs: [{ type: "uint256" }] },
   { type: "function", name: "funderPayoutOf", stateMutability: "view", inputs: [{ type: "uint256" }, { type: "address" }], outputs: [{ type: "uint256" }] },
   { type: "function", name: "owner", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
-  { type: "function", name: "cancel", stateMutability: "nonpayable", inputs: [{ type: "uint256" }], outputs: [] }
+  { type: "function", name: "cancel", stateMutability: "nonpayable", inputs: [{ type: "uint256" }], outputs: [] },
+  { type: "function", name: "partnershipCount", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "createPartnership", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "uint16" }, { type: "uint256" }, { type: "uint64" }, { type: "uint64" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "fund", stateMutability: "nonpayable", inputs: [{ type: "uint256" }, { type: "uint256" }], outputs: [] },
+  { type: "function", name: "activate", stateMutability: "nonpayable", inputs: [{ type: "uint256" }], outputs: [] },
+  { type: "function", name: "reportReturn", stateMutability: "nonpayable", inputs: [{ type: "uint256" }, { type: "uint256" }], outputs: [] },
+  { type: "function", name: "declareDefault", stateMutability: "nonpayable", inputs: [{ type: "uint256" }], outputs: [] }
 ] as const
 
 export const pool = deployment.pool as Address
@@ -79,7 +91,49 @@ export async function asAccount(address: Address) {
 
 export const stopImpersonating = (address: Address) => testClient.stopImpersonatingAccount({ address })
 
-export const waitFor = (hash: Hex) => publicClient.waitForTransactionReceipt({ hash })
+/**
+ * Waits for a transaction and fails loudly if the chain rejected it.
+ *
+ * A receipt is not a success: `status` says whether the call went through, and a
+ * setup step that reverted and was taken for done leaves a test asserting against
+ * a chain that never changed. The call is replayed against the block before the
+ * one it landed in, so the failure carries the reason the chain gave.
+ */
+export async function waitFor(hash: Hex) {
+  const receipt = await publicClient.waitForTransactionReceipt({ hash })
+  if (receipt.status === "success") return receipt
+  const sent = await publicClient.getTransaction({ hash })
+  const reason = await publicClient
+    .call({ account: sent.from, to: sent.to ?? undefined, data: sent.input, blockNumber: receipt.blockNumber - 1n })
+    .then(
+      () => "no reason given",
+      (error: Error) => error.message.split("\n").find(line => line.includes("reverted")) ?? error.message.split("\n")[0]
+    )
+  throw new Error(`transaction ${hash} reverted: ${reason}`)
+}
+
+/** Stops or restarts mining each transaction as it arrives, so a test can put several in one block. */
+export const setAutomine = (enabled: boolean) => testClient.setAutomine(enabled)
+
+export const mineBlock = () => testClient.mine({ blocks: 1 })
+
+/** Moves the fork's clock forward and mines a block at the new time. */
+export async function passTime(seconds: number) {
+  await testClient.increaseTime({ seconds })
+  await testClient.mine({ blocks: 1 })
+}
+
+/** A point to return the fork to, for a test that changes protocol state the rest of the suite relies on. */
+export const snapshotChain = () => testClient.snapshot()
+
+export const revertChain = (id: Hex) => testClient.revert({ id })
+
+/** Hashes of an account's transactions still waiting in the node's pool. */
+export async function pendingHashesFrom(account: Address): Promise<Hex[]> {
+  const content = await testClient.getTxpoolContent()
+  const queued = Object.entries(content.pending).find(([sender]) => sender.toLowerCase() === account.toLowerCase())
+  return queued ? Object.values(queued[1]).map(transaction => transaction.hash) : []
+}
 
 export const depositOf = (who: Address) =>
   publicClient.readContract({ abi: poolAbi, address: pool, functionName: "compoundedDepositOf", args: [who] })
@@ -98,6 +152,69 @@ export const contributionOf = (id: bigint, who: Address) =>
 
 export const partnership = (id: bigint) =>
   publicClient.readContract({ abi: deskAbi, address: desk, functionName: "partnerships", args: [id] })
+
+/**
+ * Re-posts each asset's own price, as a keeper would. A fork starts from the
+ * chain as it stands, where a manually priced asset can be older than its guard
+ * allows, and the pool will not draw or liquidate against a stale price.
+ */
+export async function refreshPrices(assets: Address[]) {
+  const owner = await publicClient.readContract({ abi: poolAbi, address: pool, functionName: "owner" })
+  const asOwner = await asAccount(owner)
+  for (const asset of assets) {
+    const [, , , price] = await publicClient.readContract({ abi: poolAbi, address: pool, functionName: "assetConfig", args: [asset] })
+    await waitFor(await asOwner.writeContract({ abi: poolAbi, address: pool, functionName: "setPrice", args: [asset, price] }))
+  }
+  await stopImpersonating(owner)
+}
+
+/** The price the pool holds for an asset. */
+export const priceOf = async (asset: Address) =>
+  (await publicClient.readContract({ abi: poolAbi, address: pool, functionName: "assetConfig", args: [asset] }))[3]
+
+/**
+ * Moves an asset's price down to `target` in steps the pool's deviation guard
+ * accepts, reading each one back rather than assuming it took: a step that does
+ * not land would otherwise leave the test asserting against the old price.
+ */
+export async function lowerPrice(asset: Address, target: bigint) {
+  const [, maxDeviationBps, floor] = await publicClient.readContract({ abi: poolAbi, address: pool, functionName: "priceGuards", args: [asset] })
+  if (floor !== 0n && target < floor) throw new Error(`a price of ${target} is below the band this asset allows, ${floor}`)
+  const owner = await publicClient.readContract({ abi: poolAbi, address: pool, functionName: "owner" })
+  const asOwner = await asAccount(owner)
+  try {
+    let current = await priceOf(asset)
+    for (let attempt = 0; current > target && attempt < 20; attempt += 1) {
+      const step = maxDeviationBps === 0 ? current - target : (current * BigInt(maxDeviationBps)) / 10_000n
+      const next = current - step < target ? target : current - step
+      await waitFor(await asOwner.writeContract({ abi: poolAbi, address: pool, functionName: "setPrice", args: [asset, next] }))
+      current = await priceOf(asset)
+    }
+    if (current > target) throw new Error(`${asset} would not come down to ${target}; it is at ${current}`)
+  } finally {
+    await stopImpersonating(owner)
+  }
+}
+
+/**
+ * Sizes a position from what the pool says, not from numbers typed here: a draw
+ * a fifth above the pool's minimum position, and collateral worth `cover` times
+ * what the asset's borrowing limit needs for it.
+ */
+export async function positionSizing(asset: Address, cover: bigint) {
+  const [[, maxLtvBps, liqThresholdBps, price], minDebt, feeBps] = await Promise.all([
+    publicClient.readContract({ abi: poolAbi, address: pool, functionName: "assetConfig", args: [asset] }),
+    publicClient.readContract({ abi: poolAbi, address: pool, functionName: "minPositionDebt" }),
+    publicClient.readContract({ abi: poolAbi, address: pool, functionName: "originationFeeBps" })
+  ])
+  const drawn = minDebt + minDebt / 5n
+  const debt = drawn + (drawn * BigInt(feeBps)) / 10_000n
+  // Collateral value in stable units is collateral * price / 1e30, as the pool computes it.
+  const needed = (debt * 10n ** 30n * 10_000n) / (price * BigInt(maxLtvBps))
+  // Whole tokens, rounded up, so the amount can be typed into the screen as it is.
+  const collateral = ((needed * cover) / 10n ** 18n + 1n) * 10n ** 18n
+  return { drawn, debt, collateral, price, liqThresholdBps }
+}
 
 export const usd = (units: bigint) => Number(units) / 1e6
 export const tokens = (units: bigint) => Number(units) / 1e18

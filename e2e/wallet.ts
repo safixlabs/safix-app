@@ -181,6 +181,22 @@ export async function acceptRiskGate(page: Page) {
  * pinning the suite to one of them.
  */
 export async function connect(page: Page) {
+  // A page opened with a wallet already connected restores it just after mount,
+  // so the Connect button shows for a moment first. Wait for the connection to
+  // come back rather than opening the picker over it.
+  const remembered = await page.evaluate(() => Boolean(window.localStorage.getItem("wagmi.recentConnectorId")))
+  if (remembered) {
+    const restored = await page
+      .locator("button")
+      .filter({ hasText: /0x[0-9a-fA-F]{4}|Switch to|Wrong network/ })
+      .first()
+      .waitFor({ state: "visible", timeout: 10_000 })
+      .then(
+        () => true,
+        () => false
+      )
+    if (restored) return
+  }
   const button = page.getByRole("button", { name: /^Connect/ })
   if (!(await button.isVisible().catch(() => false))) return
   await button.click()

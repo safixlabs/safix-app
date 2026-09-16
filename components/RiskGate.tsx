@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useId, useRef, useState } from "react"
 import Portal from "./Portal"
-import { GhostButton, PrimaryButton } from "./ui"
+import { GhostButton, PrimaryButton, Reason } from "./ui"
 
 const STORAGE_KEY = "safix.risk.acknowledged"
 
@@ -19,6 +19,7 @@ export function hasAcknowledgedRisk() {
 
 export default function RiskGate({ open, onAccept, onDismiss }: { open: boolean; onAccept: () => void; onDismiss: () => void }) {
   const [checked, setChecked] = useState(false)
+  const reasonId = useId()
   const dialogRef = useRef<HTMLDivElement | null>(null)
 
   // The dialog renders through a portal that mounts in an effect of its own, so
@@ -118,13 +119,23 @@ export default function RiskGate({ open, onAccept, onDismiss }: { open: boolean;
             </span>
           </label>
           <div className="mt-6 flex items-center gap-3">
-            <PrimaryButton disabled={!checked} onClick={accept} className="flex-1">
+            <PrimaryButton
+              disabled={!checked}
+              aria-describedby={checked ? undefined : reasonId}
+              onClick={accept}
+              className="flex-1"
+            >
               Continue
             </PrimaryButton>
             <GhostButton onClick={onDismiss} className="self-stretch">
               Cancel
             </GhostButton>
           </div>
+          {checked ? null : (
+            <div className="mt-3">
+              <Reason id={reasonId}>Tick the box above to continue.</Reason>
+            </div>
+          )}
         </div>
       </div>
     </Portal>

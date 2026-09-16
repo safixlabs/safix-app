@@ -18,6 +18,8 @@ export const FORK_URL = process.env.E2E_FORK_URL ?? config.forkUrl
 export const RPC_URL = process.env.E2E_RPC_URL ?? `http://127.0.0.1:${config.port}`
 export const CHAIN_ID = Number(process.env.E2E_CHAIN_ID ?? config.chainId)
 export const CHAIN_ID_HEX = `0x${CHAIN_ID.toString(16)}` as const
+/** Block the deployment started at, which is where the app reads its logs from. */
+export const DEPLOY_BLOCK = BigInt(process.env.NEXT_PUBLIC_DEPLOY_BLOCK ?? config.deployBlock)
 
 const address = (name: string, fallback: string) => (process.env[name] ?? fallback).toLowerCase()
 

@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { useAccount, usePublicClient, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
-import { AmountField, ConfirmedLink, PageHeader, Panel, PrimaryButton } from "@/components/ui"
+import { AmountField, ConfirmedLink, IN_PROGRESS, PageHeader, Panel, PrimaryButton, Reason } from "@/components/ui"
 import { activeChain } from "@/lib/chain"
 import { usd } from "@/lib/demo"
 import { reportReadFailure, reportReadSuccess } from "@/lib/health"
@@ -11,8 +11,13 @@ import { TxToast } from "@/components/TxToast"
 import { humanError } from "@/lib/errors"
 import { reportError } from "@/lib/monitoring"
 import { deskAbi, deskAddress, erc20Abi, fromUsdgUnits, usdgAddress, usdgUnits } from "@/lib/safix"
+import { useRecordSubmission } from "@/lib/submitted"
 
-const statusLabels = ["Funding", "Active", "Settled", "Cancelled"] as const
+/** In the order of the desk's `Status` enum, so the number read off the chain indexes it directly. */
+const statusLabels = ["Funding", "Active", "Settled", "Cancelled", "Defaulted"] as const
+
+/** The statuses the desk lets a funder claim in: settled, cancelled, or declared in default. */
+const CLAIMABLE = new Set([2, 3, 4])
 
 type PartnershipRow = {
   id: number
@@ -38,7 +43,9 @@ function StatusPill({ status }: { status: number }) {
           ? "border-mint text-mint"
           : status === 2
             ? "border-line text-fog"
-            : "border-line text-haze"
+            : status === 4
+              ? "border-amber/60 text-amber"
+              : "border-line text-haze"
       }`}
     >
       {label}
@@ -62,9 +69,24 @@ function LivePartnerships() {
   const [loaded, setLoaded] = useState(false)
   const [amounts, setAmounts] = useState<Record<number, string>>({})
 
-  const { writeContract, data: txHash, isPending, error } = useWriteContract()
+  const { writeContract, data: txHash, isPending, error: writeError, variables } = useWriteContract()
   const receipt = useWaitForTransactionReceipt({ hash: txHash })
+  // The wallet can accept a transaction that then reverts in its block. That
+  // failure arrives on the receipt, and is as much a failure as a refused call.
+  const error = writeError ?? receipt.error
+  useRecordSubmission(txHash, variables, address)
   const busy = isPending || (Boolean(txHash) && receipt.isLoading)
+  const reasonId = useId()
+  // Funding with no amount did nothing when clicked; it is held back and says why instead.
+  const fundReason = (row: PartnershipRow) =>
+    !address
+      ? "Connect a wallet to fund this partnership."
+      : busy
+        ? IN_PROGRESS
+        : Number.parseFloat(amounts[row.id] ?? "") > 0
+          ? null
+          : "Enter an amount to fund."
+  const claimReason = !address ? "Connect a wallet to claim." : busy ? IN_PROGRESS : null
 
   // `payout` and `contribution` are read for one account. The rest of a row is
   // public, so only the account-specific figures are dropped on a switch: the
@@ -228,29 +250,45 @@ function LivePartnerships() {
               </div>
 
               {row.status === 0 ? (
-                <div className="flex flex-col gap-2.5 sm:flex-row">
-                  <AmountField
-                    inputMode="decimal"
-                    aria-label={`Amount of USDG to fund partnership ${row.id}`}
-                    placeholder="0.00"
-                    value={amounts[row.id] ?? ""}
-                    onChange={event => setAmounts(current => ({ ...current, [row.id]: event.target.value }))}
-                  />
-                  <PrimaryButton
-                    disabled={busy || !address}
-                    onClick={() => fund(row)}
-                    className="shrink-0"
-                    aria-label={`Fund partnership ${row.id}`}
-                  >
-                    Fund
-                  </PrimaryButton>
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex flex-col gap-2.5 sm:flex-row">
+                    <AmountField
+                      inputMode="decimal"
+                      aria-label={`Amount of USDG to fund partnership ${row.id}`}
+                      placeholder="0.00"
+                      value={amounts[row.id] ?? ""}
+                      onChange={event => setAmounts(current => ({ ...current, [row.id]: event.target.value }))}
+                    />
+                    <PrimaryButton
+                      disabled={Boolean(fundReason(row))}
+                      onClick={() => fund(row)}
+                      className="shrink-0"
+                      aria-label={`Fund partnership ${row.id}`}
+                      aria-describedby={fundReason(row) ? `${reasonId}-fund-${row.id}` : undefined}
+                    >
+                      Fund
+                    </PrimaryButton>
+                  </div>
+                  <Reason id={`${reasonId}-fund-${row.id}`} align="left">
+                    {fundReason(row)}
+                  </Reason>
                 </div>
               ) : null}
 
-              {(row.status === 2 || row.status === 3) && row.payout > 0 ? (
-                <PrimaryButton disabled={busy || !address} onClick={() => claim(row)} className="w-fit">
-                  Claim {usd(row.payout)}
-                </PrimaryButton>
+              {CLAIMABLE.has(row.status) && row.payout > 0 ? (
+                <div className="flex flex-col gap-2">
+                  <PrimaryButton
+                    disabled={Boolean(claimReason)}
+                    aria-describedby={claimReason ? `${reasonId}-claim-${row.id}` : undefined}
+                    onClick={() => claim(row)}
+                    className="w-fit"
+                  >
+                    Claim {usd(row.payout)}
+                  </PrimaryButton>
+                  <Reason id={`${reasonId}-claim-${row.id}`} align="left">
+                    {claimReason}
+                  </Reason>
+                </div>
               ) : null}
 
               {row.contribution > 0 ? (

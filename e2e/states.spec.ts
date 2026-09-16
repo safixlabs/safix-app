@@ -1,8 +1,31 @@
 import { expect, test } from "@playwright/test"
-import type { Address } from "viem"
-import { accounts } from "./deployment"
+import { parseAbiItem, type Address } from "viem"
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
+import { DEPLOY_BLOCK, accounts } from "./deployment"
 import { connect, dropWatchAsset, installWallet, refuseSignatures, watchedAssets } from "./wallet"
-import { balanceOf, erc20Abi, pool, publicClient, tgold, usdgToken, waitFor, walletFor } from "./chain"
+import {
+  asAccount,
+  balanceOf,
+  depositOf,
+  desk,
+  deskAbi,
+  erc20Abi,
+  partnership,
+  passTime,
+  pool,
+  poolAbi,
+  publicClient,
+  revertChain,
+  snapshotChain,
+  stopImpersonating,
+  tgold,
+  usdgToken,
+  waitFor,
+  walletFor
+} from "./chain"
+
+const dollars = (units: bigint) =>
+  (Number(units) / 1e6).toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 })
 
 const live = process.env.E2E_LIVE === "1"
 const borrower = accounts.borrower.address as Address
@@ -49,6 +72,17 @@ test.describe("states", () => {
     await expect(page.getByText(/0\.0000 tGOLD/).first()).toBeVisible()
     const draw = page.locator("section").filter({ hasText: "Draw USDG" }).locator("button.w-full").last()
     await expect(draw).toBeDisabled()
+    // Disabled, and saying why: to a screen reader through the description, on screen as text.
+    await expect(draw).toHaveAccessibleDescription("Enter an amount to draw.")
+    await expect(page.getByRole("button", { name: "Use the maximum USDG to draw" })).toHaveAccessibleDescription(
+      "Lock collateral above to open a line of credit."
+    )
+    await expect(page.getByRole("button", { name: "Use the maximum USDG to repay" })).toHaveAccessibleDescription(
+      "There is no debt to repay."
+    )
+    await expect(page.getByRole("button", { name: "Lock collateral" })).toHaveAccessibleDescription(
+      "Enter an amount of tGOLD to lock."
+    )
   })
 
   test("insufficient balance: the chain refuses and the reason is in plain words", async ({ page }) => {
@@ -87,6 +121,109 @@ test.describe("states", () => {
     const draw = panel.locator("button.w-full").last()
     await expect(draw).toHaveText(/Above what this collateral supports/)
     await expect(draw).toBeDisabled()
+  })
+
+  test("no idle liquidity: the draw ceiling names the pool, not the collateral", async ({ page }) => {
+    await installWallet(page)
+    // Liquidity is taken out of the pool below; the rest of the suite needs it back.
+    const snapshot = await snapshotChain()
+    const impersonated: Address[] = []
+    try {
+      // Collateral in the position and no debt, so the collateral itself allows a draw.
+      const wallet = walletFor(accounts.borrower.key)
+      const amount = 10n ** 18n
+      await waitFor(await wallet.writeContract({ abi: erc20Abi, address: tgold, functionName: "mint", args: [borrower, amount] }))
+      await waitFor(await wallet.writeContract({ abi: erc20Abi, address: tgold, functionName: "approve", args: [pool, amount] }))
+      await waitFor(await wallet.writeContract({ abi: poolAbi, address: pool, functionName: "lockCollateral", args: [tgold, amount] }))
+
+      // The pool's own providers, read from its logs, take out what it can pay until nothing is idle.
+      const deposits = await publicClient.getLogs({
+        address: pool,
+        event: parseAbiItem("event Deposited(address indexed provider, uint256 amount)"),
+        fromBlock: DEPLOY_BLOCK,
+        toBlock: "latest"
+      })
+      const idle = () => publicClient.readContract({ abi: poolAbi, address: pool, functionName: "availableLiquidity" })
+      for (const provider of new Set(deposits.map(log => log.args.provider as Address))) {
+        const available = await idle()
+        if (available === 0n) break
+        const held = await depositOf(provider)
+        const take = held < available ? held : available
+        if (take === 0n) continue
+        const asProvider = await asAccount(provider)
+        impersonated.push(provider)
+        await waitFor(await asProvider.writeContract({ abi: poolAbi, address: pool, functionName: "withdraw", args: [take] }))
+      }
+      expect(await idle()).toBe(0n)
+
+      await page.goto("/borrow/")
+      await connect(page)
+      await page.getByRole("button", { name: "Select tGOLD as collateral" }).click()
+      const sentence =
+        "The pool has no idle liquidity right now, so nothing can be drawn until providers deposit or borrowers repay."
+      await expect(page.getByText(sentence)).toBeVisible({ timeout: 30_000 })
+      await expect(page.getByRole("button", { name: "Use the maximum USDG to draw" })).toHaveAccessibleDescription(sentence)
+    } finally {
+      for (const address of impersonated) await stopImpersonating(address)
+      await revertChain(snapshot)
+    }
+  })
+})
+
+test.describe("a partnership declared in default", () => {
+  test.skip(!live, "run with npm run e2e:live")
+
+  test("reads as defaulted and pays the funder what the operator returned", async ({ page }) => {
+    await installWallet(page)
+    // The clock is moved past a reporting deadline below; the rest of the suite needs it back.
+    const snapshot = await snapshotChain()
+    const operator = privateKeyToAccount(generatePrivateKey()).address
+    const owner = await publicClient.readContract({ abi: deskAbi, address: desk, functionName: "owner" })
+    try {
+      const asOwner = await asAccount(owner)
+      const asOperator = await asAccount(operator)
+      const wallet = walletFor(accounts.borrower.key)
+      const now = BigInt((await publicClient.getBlock()).timestamp)
+      const id = await publicClient.readContract({ abi: deskAbi, address: desk, functionName: "partnershipCount" })
+      await waitFor(
+        await asOwner.writeContract({
+          abi: deskAbi,
+          address: desk,
+          functionName: "createPartnership",
+          args: [operator, 4000, 1_000_000_000n, now + 3_600n, now + 7_200n]
+        })
+      )
+
+      const contributed = 400_000_000n
+      await waitFor(await wallet.writeContract({ abi: erc20Abi, address: usdgToken, functionName: "mint", args: [borrower, contributed] }))
+      await waitFor(await wallet.writeContract({ abi: erc20Abi, address: usdgToken, functionName: "approve", args: [desk, contributed] }))
+      await waitFor(await wallet.writeContract({ abi: deskAbi, address: desk, functionName: "fund", args: [id, contributed] }))
+      await waitFor(await asOwner.writeContract({ abi: deskAbi, address: desk, functionName: "activate", args: [id] }))
+
+      // The operator brings some of it back, then goes quiet past the reporting deadline.
+      const returned = 150_000_000n
+      await waitFor(await asOperator.writeContract({ abi: erc20Abi, address: usdgToken, functionName: "mint", args: [operator, returned] }))
+      await waitFor(await asOperator.writeContract({ abi: erc20Abi, address: usdgToken, functionName: "approve", args: [desk, returned] }))
+      await waitFor(await asOperator.writeContract({ abi: deskAbi, address: desk, functionName: "reportReturn", args: [id, returned] }))
+      await passTime(7_200 + 60)
+      await waitFor(await asOperator.writeContract({ abi: deskAbi, address: desk, functionName: "declareDefault", args: [id] }))
+      expect((await partnership(id))[3]).toBe(4)
+
+      const payout = await publicClient.readContract({ abi: deskAbi, address: desk, functionName: "funderPayoutOf", args: [id, borrower] })
+      expect(payout).toBeGreaterThan(0n)
+      const held = await balanceOf(usdgToken, borrower)
+
+      await page.goto("/partnerships/")
+      await connect(page)
+      const card = page.locator("section").filter({ has: page.getByRole("heading", { name: `Partnership #${id}`, exact: true }) })
+      await expect(card.getByText("Defaulted", { exact: true })).toBeVisible({ timeout: 30_000 })
+      await card.getByRole("button", { name: `Claim ${dollars(payout)}` }).click()
+      await expect.poll(() => balanceOf(usdgToken, borrower), { timeout: 40_000 }).toBe(held + payout)
+    } finally {
+      await stopImpersonating(owner)
+      await stopImpersonating(operator)
+      await revertChain(snapshot)
+    }
   })
 })
 

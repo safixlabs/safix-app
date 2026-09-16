@@ -12,13 +12,17 @@ import {
   deskAbi,
   erc20Abi,
   gainOf,
+  lowerPrice,
   partnership,
   pool,
   poolAbi,
   positionOf,
+  positionSizing,
   publicClient,
+  refreshPrices,
   stopImpersonating,
   tbill,
+  tgold,
   usdgToken,
   waitFor,
   walletFor
@@ -47,6 +51,10 @@ type Page = import("@playwright/test").Page
  */
 const panelOf = (page: Page, title: string) =>
   page.locator("section").filter({ has: page.getByRole("heading", { name: title, exact: true }) })
+
+/** A partnership's card, by its heading. "Partnership #1" as text would also match #10. */
+const partnershipCard = (page: Page, id: bigint) =>
+  page.locator("section").filter({ has: page.getByRole("heading", { name: `Partnership #${id}`, exact: true }) })
 
 /** The full-width action button at the foot of a panel. */
 const actionOf = (page: Page, panel: string) => panelOf(page, panel).locator("button.w-full").last()
@@ -90,6 +98,14 @@ const press = async (page: Page, panel: string, label: RegExp) => {
 test.describe.serial("money paths", () => {
   test.skip(!live, "run with npm run e2e:live")
 
+  /** The partnership the funding tests open, fund, cancel and claim from. */
+  let openPartnership: bigint
+
+  test.beforeAll(async () => {
+    if (!live) return
+    await refreshPrices([tbill, bnvda, tgold])
+  })
+
   test.beforeEach(async ({ page }) => {
     await installWallet(page)
   })
@@ -128,21 +144,34 @@ test.describe.serial("money paths", () => {
 
   test("claim takes the collateral a liquidation left in the pool", async ({ page }) => {
     // A liquidation has to have happened for there to be anything to claim, so
-    // one is arranged: a second account borrows against bNVDA, the owner moves
-    // the price under it, and the position is liquidated. The pool's providers
-    // are then owed the seized collateral.
+    // one is arranged: a second account borrows against bNVDA close to its
+    // limit, the owner moves the price under it, and the position is liquidated.
+    // The pool's providers are then owed the seized collateral.
     const second = walletFor(accounts.second.key)
     const victim = accounts.second.address as Address
-    await waitFor(await second.writeContract({ abi: erc20Abi, address: bnvda, functionName: "mint", args: [victim, 10n ** 18n] }))
-    await waitFor(await second.writeContract({ abi: erc20Abi, address: bnvda, functionName: "approve", args: [pool, 10n ** 18n] }))
-    await waitFor(await second.writeContract({ abi: poolAbi, address: pool, functionName: "lockCollateral", args: [bnvda, 10n ** 18n] }))
-    await waitFor(await second.writeContract({ abi: poolAbi, address: pool, functionName: "draw", args: [bnvda, 90_000000n] }))
+    const { drawn, collateral, liqThresholdBps } = await positionSizing(bnvda, 1n)
+    await waitFor(await second.writeContract({ abi: erc20Abi, address: bnvda, functionName: "mint", args: [victim, collateral] }))
+    await waitFor(await second.writeContract({ abi: erc20Abi, address: bnvda, functionName: "approve", args: [pool, collateral] }))
+    await waitFor(await second.writeContract({ abi: poolAbi, address: pool, functionName: "lockCollateral", args: [bnvda, collateral] }))
+    await waitFor(await second.writeContract({ abi: poolAbi, address: pool, functionName: "draw", args: [bnvda, drawn] }))
+
+    // Below the price at which the collateral stops covering the debt at the liquidation threshold.
+    const [, debt] = await positionOf(victim, bnvda)
+    const uncovered = (debt * 10n ** 30n * 10_000n) / (collateral * BigInt(liqThresholdBps))
+    await lowerPrice(bnvda, (uncovered * 95n) / 100n)
+    // isLiquidatable answers false for any price the pool will not act on, so say which it is first.
+    const [priceStatus, price, updatedAt] = await publicClient.readContract({ abi: poolAbi, address: pool, functionName: "priceStatus", args: [bnvda] })
+    const { timestamp } = await publicClient.getBlock()
+    expect(priceStatus, `bNVDA price ${price} posted at ${updatedAt}, block time ${timestamp}: PriceStatus 0 is usable`).toBe(0)
+    const [heldCollateral, heldDebt] = await positionOf(victim, bnvda)
+    expect(
+      await publicClient.readContract({ abi: poolAbi, address: pool, functionName: "isLiquidatable", args: [victim, bnvda] }),
+      `position ${heldCollateral} collateral against ${heldDebt} debt (locked here ${collateral}, drawn ${drawn}) at ${price}, threshold ${liqThresholdBps} bps`
+    ).toBe(true)
 
     const owner = await publicClient.readContract({ abi: poolAbi, address: pool, functionName: "owner" })
     const asOwner = await asAccount(owner)
-    await waitFor(await asOwner.writeContract({ abi: poolAbi, address: pool, functionName: "setPrice", args: [bnvda, 100n * 10n ** 18n] }))
-    expect(await publicClient.readContract({ abi: poolAbi, address: pool, functionName: "isLiquidatable", args: [victim, bnvda] })).toBe(true)
-    await waitFor(await asOwner.writeContract({ abi: poolAbi, address: pool, functionName: "liquidate", args: [victim, bnvda, 45_000000n] }))
+    await waitFor(await asOwner.writeContract({ abi: poolAbi, address: pool, functionName: "liquidate", args: [victim, bnvda, debt] }))
     await stopImpersonating(owner)
 
     const owed = await gainOf(borrower, bnvda)
@@ -160,21 +189,24 @@ test.describe.serial("money paths", () => {
 
   // ----------------------------------------------------------------- borrow
   test("lock moves collateral into the position", async ({ page }) => {
+    // Enough for the draw below with room to spare, so it stays clear of the liquidation warning.
+    const { collateral } = await positionSizing(tbill, 2n)
+    const typed = (collateral / 10n ** 18n).toString()
     const wallet = walletFor(accounts.borrower.key)
-    await waitFor(await wallet.writeContract({ abi: erc20Abi, address: tbill, functionName: "mint", args: [borrower, 10n ** 18n] }))
+    await waitFor(await wallet.writeContract({ abi: erc20Abi, address: tbill, functionName: "mint", args: [borrower, collateral] }))
 
     const [before] = await positionOf(borrower, tbill)
     await page.goto("/borrow/")
     await connect(page)
 
-    const collateral = panelOf(page, "Collateral")
+    const panel = panelOf(page, "Collateral")
     const lock = actionOf(page, "Collateral")
-    await collateral.getByPlaceholder(/Amount of tBILL/).fill("1")
+    await panel.getByPlaceholder(/Amount of tBILL/).fill(typed)
     await expect(lock).toBeEnabled({ timeout: 30_000 })
     if (/Approve/i.test((await lock.innerText()).trim())) {
       await lock.click()
       await expect(lock).toHaveText(/Lock collateral/, { timeout: 90_000 })
-      await collateral.getByPlaceholder(/Amount of tBILL/).fill("1")
+      await panel.getByPlaceholder(/Amount of tBILL/).fill(typed)
     }
     await expect(lock).toBeEnabled({ timeout: 30_000 })
     await lock.click()
@@ -189,7 +221,9 @@ test.describe.serial("money paths", () => {
 
     await page.goto("/borrow/")
     await connect(page)
-    await complete(page, "Draw USDG", "20", /^Draw/)
+    // At least the pool's minimum position, which is what the pool itself requires of a draw.
+    const { drawn } = await positionSizing(tbill, 2n)
+    await complete(page, "Draw USDG", (Number(drawn) / 1e6).toFixed(2), /^Draw/)
 
     const after = await settles(async () => (await positionOf(borrower, tbill))[1], before)
     expect(after).toBeGreaterThan(before)
@@ -249,18 +283,33 @@ test.describe.serial("money paths", () => {
 
   // ----------------------------------------------------------- partnerships
   test("fund moves USDG into a partnership", async ({ page }) => {
-    const before = await contributionOf(0n, borrower)
+    // A partnership open for funding is arranged by the desk's owner: the ones
+    // already on the chain may have closed, and this path needs one taking money.
+    const owner = await publicClient.readContract({ abi: deskAbi, address: desk, functionName: "owner" })
+    const asOwner = await asAccount(owner)
+    const now = BigInt((await publicClient.getBlock()).timestamp)
+    openPartnership = await publicClient.readContract({ abi: deskAbi, address: desk, functionName: "partnershipCount" })
+    await waitFor(
+      await asOwner.writeContract({
+        abi: deskAbi,
+        address: desk,
+        functionName: "createPartnership",
+        args: [accounts.second.address as Address, 4000, 1_000_000_000n, now + 86_400n, now + 172_800n]
+      })
+    )
+    await stopImpersonating(owner)
+    const before = await contributionOf(openPartnership, borrower)
 
     await page.goto("/partnerships/")
     await connect(page)
-    const card = page.locator("section").filter({ hasText: "Partnership #0" })
+    const card = partnershipCard(page, openPartnership)
     await card.getByPlaceholder("0.00").fill("100")
     const fund = card.getByRole("button", { name: "Fund" })
     await fund.click()
     await page.waitForTimeout(5000)
     if (await fund.isEnabled().catch(() => false)) await fund.click()
 
-    const after = await settles(() => contributionOf(0n, borrower), before)
+    const after = await settles(() => contributionOf(openPartnership, borrower), before)
     expect(after).toBeGreaterThan(before)
   })
 
@@ -269,16 +318,16 @@ test.describe.serial("money paths", () => {
     // path under test is the funder's claim, not the owner's cancel.
     const owner = await publicClient.readContract({ abi: deskAbi, address: desk, functionName: "owner" })
     const asOwner = await asAccount(owner)
-    const [, , , status] = await partnership(0n)
+    const [, , , status] = await partnership(openPartnership)
     if (status === 0) {
-      await waitFor(await asOwner.writeContract({ abi: deskAbi, address: desk, functionName: "cancel", args: [0n] }))
+      await waitFor(await asOwner.writeContract({ abi: deskAbi, address: desk, functionName: "cancel", args: [openPartnership] }))
     }
     await stopImpersonating(owner)
 
     const held = await balanceOf(usdgToken, borrower)
     await page.goto("/partnerships/")
     await connect(page)
-    const card = page.locator("section").filter({ hasText: "Partnership #0" })
+    const card = partnershipCard(page, openPartnership)
     await card.getByRole("button", { name: /^Claim/ }).click()
 
     const after = await settles(() => balanceOf(usdgToken, borrower), held)

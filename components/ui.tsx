@@ -116,11 +116,14 @@ export function Segmented<T extends string>({
 export function QuickAmounts({
   onPick,
   disabled,
-  label
+  label,
+  describedBy
 }: {
   onPick: (fraction: number) => void
   disabled?: boolean
   label: string
+  /** Id of the visible sentence saying why the fractions are unavailable. */
+  describedBy?: string
 }) {
   return (
     <div role="group" aria-label={`Quick amounts for ${label}`} className="flex gap-2">
@@ -129,6 +132,7 @@ export function QuickAmounts({
           key={fraction}
           onClick={() => onPick(fraction)}
           disabled={disabled}
+          aria-describedby={disabled ? describedBy : undefined}
           aria-label={
             fraction === 1 ? `Use the maximum ${label}` : `Use ${fraction * 100} percent of ${label}`
           }
@@ -227,6 +231,36 @@ export function Panel({ title, children }: { title: ReactNode; children: ReactNo
     </section>
   )
 }
+
+/**
+ * Why a control cannot be used right now, as a sentence on screen.
+ *
+ * The control points at it with `aria-describedby`, so a screen reader reads
+ * the reason along with the control's name. A `title` would reach neither a
+ * keyboard user nor most screen readers. Renders nothing without a reason.
+ */
+export function Reason({
+  id,
+  children,
+  align = "center"
+}: {
+  id: string
+  children?: ReactNode
+  align?: "center" | "left"
+}) {
+  if (!children) return null
+  return (
+    <p
+      id={id}
+      className={`${align === "left" ? "text-left" : "text-center"} text-[12.5px] leading-[1.5] tracking-[-0.02em] text-haze`}
+    >
+      {children}
+    </p>
+  )
+}
+
+/** The reason for any control held back while a transaction from the same screen is still out. */
+export const IN_PROGRESS = "Another transaction is still in progress. Wait for it to finish."
 
 export function PrimaryButton(props: ButtonHTMLAttributes<HTMLButtonElement>) {
   const { className, ...rest } = props

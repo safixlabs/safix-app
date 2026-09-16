@@ -58,6 +58,21 @@ export const activeChain =
       ? localChain
       : robinhoodTestnet
 
+/**
+ * The endpoints the active chain is read through, in the order they are tried.
+ * One list for every reader: the wallet transport, the health check and the log
+ * reader all ask the same nodes, rather than each guessing at its own.
+ */
+export const rpcEndpoints: string[] = (
+  activeChain.id === localChain.id
+    ? [localChain.rpcUrls.default.http[0]]
+    : [
+        process.env.NEXT_PUBLIC_RPC_OVERRIDE,
+        process.env.NEXT_PUBLIC_RPC_FALLBACK,
+        activeChain.rpcUrls.default.http[0]
+      ]
+).filter((url): url is string => Boolean(url))
+
 const explorers = (activeChain as { blockExplorers?: { default: { url: string } } }).blockExplorers
 
 export const explorerTxUrl = (hash?: `0x${string}`) =>

@@ -1,15 +1,22 @@
 {
-  "comment": "The deployment the money-path suite runs against. anvil forks this chain, so the contracts under test are the ones really deployed on it. Override any of these with the matching NEXT_PUBLIC_ variable, or E2E_FORK_URL, to point the suite at a different deployment.",
+  "comment": "The deployment the money-path suite runs against: the one safixlabs/safix records in deployments/testnet.json. anvil forks this chain, so the contracts under test are the ones really deployed on it. Override any of these with the matching NEXT_PUBLIC_ variable, or E2E_FORK_URL, to point the suite at a different deployment.",
+  "source": {
+    "repository": "safixlabs/safix",
+    "record": "deployments/testnet.json",
+    "recordCommit": "ec913ceeef567acf166398ac82316f5eadf2e138",
+    "builtFrom": "c1ed0965a2f5e87d6e68ad05e3ac256196a303c0"
+  },
   "forkUrl": "https://rpc.testnet.chain.robinhood.com",
   "chainId": 31337,
   "port": 8545,
+  "deployBlock": 114962671,
   "addresses": {
-    "pool": "0xe438a05823a8e5d15efd35760269076508bbff2e",
-    "usdg": "0x45eb873b11fb3e830130b84f261808b50766b22e",
-    "registry": "0x5e639adad1eff125f269458ed5d0f942d9be936c",
-    "desk": "0x3d239e1000e0f9fa644bb6f75ba7183695c1a510",
-    "tbill": "0xbd6a2741af888b104fe2655876d5d052e8442301",
-    "bnvda": "0xbc10209c538653b1d1f9ed0ccd2dc5debec45f8b",
-    "tgold": "0xad7d7ac848ac3e2d74c3eccb838cd0c2c1c2f201"
+    "pool": "0xc7dc6ca56dddf387cf5fd6dfdf4e728a7878df38",
+    "usdg": "0xa8807fa75b33b2a452de17fa08287659d1f5b559",
+    "registry": "0xb9b15e826bf0266a8dc02d8498cdc520a52d1030",
+    "desk": "0x8d722ec4d48a0051b2a996e09ebf95a9dc4e5375",
+    "tbill": "0xe848360b1baeb68b080c7b2731095ba1c21d0ada",
+    "bnvda": "0x06bcd9b23093480fc978f8da3168c64902f52d3e",
+    "tgold": "0xa5e5e369c07283fc086fb0bddee9cd8b8bbe44d0"
   }
 }

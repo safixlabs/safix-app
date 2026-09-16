@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { useAccount, useReadContract, useReadContracts, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
 import { TokenHandle, WalletOffer } from "@/components/AddToWallet"
 import {
@@ -8,11 +8,13 @@ import {
   AssetMark,
   ConfirmedLink,
   GhostButton,
+  IN_PROGRESS,
   Meter,
   PageHeader,
   Panel,
   PrimaryButton,
   QuickAmounts,
+  Reason,
   Segmented,
   Stat,
   SummaryRow,
@@ -24,6 +26,7 @@ import { activeChain } from "@/lib/chain"
 import { tokenAmount, usd } from "@/lib/demo"
 import { TxToast } from "@/components/TxToast"
 import { humanError } from "@/lib/errors"
+import { useRecordSubmission } from "@/lib/submitted"
 import {
   erc20Abi,
   fromTokenUnits,
@@ -92,20 +95,25 @@ function PoolStats({
 function GainsCard({
   rows,
   onClaim,
-  disabled,
+  reason,
   note
 }: {
   rows: GainRow[]
   onClaim: () => void
-  disabled: boolean
+  /** Why claiming is unavailable, other than there being nothing to claim. */
+  reason: string | null
   note: string
 }) {
   const claimable = rows.filter(row => row.amount > 0)
+  const emptyId = useId()
+  const noteId = useId()
+  // An empty list already says there is nothing to claim, so that sentence is the reason.
+  const describedBy = reason ? noteId : claimable.length === 0 ? emptyId : undefined
 
   return (
     <Panel title="Claimable gains">
       {claimable.length === 0 ? (
-        <p className="py-2 text-[14px] leading-[1.6] tracking-[-0.01em] text-haze">
+        <p id={emptyId} className="py-2 text-[14px] leading-[1.6] tracking-[-0.01em] text-haze">
           No liquidation gains yet. When a position is liquidated, its collateral arrives here at a
           discount and can be claimed at any time.
         </p>
@@ -126,10 +134,17 @@ function GainsCard({
         </ul>
       )}
       <div className="mt-5 flex flex-col gap-3">
-        <PrimaryButton onClick={onClaim} disabled={disabled || claimable.length === 0} className="w-full">
+        <PrimaryButton
+          onClick={onClaim}
+          disabled={Boolean(reason) || claimable.length === 0}
+          aria-describedby={describedBy}
+          className="w-full"
+        >
           Claim all
         </PrimaryButton>
-        <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">{note}</p>
+        <p id={noteId} className="text-center text-[12.5px] tracking-[-0.02em] text-haze">
+          {reason ?? note}
+        </p>
       </div>
     </Panel>
   )
@@ -175,7 +190,8 @@ function LiquidityCard({
   poolSize,
   actionLabel,
   onSubmit,
-  disabled,
+  reason,
+  quickReason,
   note,
   extra
 }: {
@@ -188,10 +204,16 @@ function LiquidityCard({
   poolSize: number
   actionLabel: React.ReactNode
   onSubmit: () => void
-  disabled: boolean
+  /** Why the action is unavailable. The action is enabled only when there is none. */
+  reason: string | null
+  /** Why the quick amounts are unavailable, when they are. */
+  quickReason: string | null
   note: React.ReactNode
-  extra?: React.ReactNode
+  /** Further controls, handed the id of the reason line so they can point at it. */
+  extra?: (reasonId: string) => React.ReactNode
 }) {
+  const reasonId = useId()
+  const quickId = useId()
   const parsed = Number.parseFloat(amount)
   const value = Number.isFinite(parsed) && parsed > 0 ? parsed : 0
   const ceiling = mode === "deposit" ? walletBalance : yourDeposit
@@ -220,17 +242,25 @@ function LiquidityCard({
           label={mode === "deposit" ? "USDG to deposit" : "USDG to withdraw"}
           onPick={fraction => setAmount((ceiling * fraction).toFixed(2))}
           disabled={ceiling <= 0}
+          describedBy={quickReason === null ? undefined : quickReason === reason ? reasonId : quickId}
         />
+        <Reason id={quickId}>{quickReason !== reason ? quickReason : null}</Reason>
 
         <div className="flex flex-col divide-y divide-line border-y border-line">
           <SummaryRow label="Your deposit after" value={usd(depositAfter)} />
           <SummaryRow label="Share of pool after" value={`${(shareAfter * 100).toFixed(2)}%`} />
         </div>
 
-        <PrimaryButton onClick={onSubmit} disabled={disabled} className="w-full">
+        <PrimaryButton
+          onClick={onSubmit}
+          disabled={Boolean(reason)}
+          aria-describedby={reason ? reasonId : undefined}
+          className="w-full"
+        >
           {actionLabel}
         </PrimaryButton>
-        {extra}
+        <Reason id={reasonId}>{reason}</Reason>
+        {extra?.(reasonId)}
         <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">{note}</p>
       </div>
     </Panel>
@@ -274,8 +304,12 @@ function LivePool() {
     query: { enabled: Boolean(address) && liveAssets.length > 0 }
   })
 
-  const { writeContract, data: txHash, isPending, error } = useWriteContract()
+  const { writeContract, data: txHash, isPending, error: writeError, variables } = useWriteContract()
   const receipt = useWaitForTransactionReceipt({ hash: txHash })
+  // The wallet can accept a transaction that then reverts in its block. That
+  // failure arrives on the receipt, and is as much a failure as a refused call.
+  const error = writeError ?? receipt.error
+  useRecordSubmission(txHash, variables, address)
   // The step to record if the transaction now in flight confirms.
   const pendingStep = useRef<AnalyticsEvent | undefined>(undefined)
 
@@ -348,9 +382,24 @@ function LivePool() {
     <ConfirmedLink hash={txHash} />
   ) : address ? (
     "Withdraw any time outside active liquidations."
-  ) : (
-    "Connect a wallet to provide liquidity."
-  )
+  ) : null
+
+  const ceiling = mode === "deposit" ? walletBalance : yourDeposit
+  const reason = !address
+    ? "Connect a wallet to provide liquidity."
+    : busy
+      ? IN_PROGRESS
+      : units === 0n
+        ? `Enter an amount to ${mode}.`
+        : null
+  const quickReason =
+    ceiling > 0
+      ? null
+      : !address
+        ? reason
+        : mode === "deposit"
+          ? "This wallet holds no USDG to deposit."
+          : "Nothing is deposited to withdraw."
 
   return (
     <>
@@ -371,7 +420,8 @@ function LivePool() {
           walletBalance={walletBalance}
           yourDeposit={yourDeposit}
           poolSize={poolSize}
-          disabled={units === 0n || busy || !address}
+          reason={reason}
+          quickReason={quickReason}
           onSubmit={submit}
           actionLabel={
             busy ? (
@@ -385,9 +435,14 @@ function LivePool() {
             )
           }
           note={status}
-          extra={
+          extra={reasonId => (
             <>
-              <GhostButton size="sm" onClick={mintTestUsdg} disabled={busy || !address}>
+              <GhostButton
+                size="sm"
+                onClick={mintTestUsdg}
+                disabled={busy || !address}
+                aria-describedby={busy || !address ? reasonId : undefined}
+              >
                 <span className="inline-flex items-center gap-1.5">Mint 10,000 test <Usdg /></span>
               </GhostButton>
               {usdgAddress ? <TokenHandle address={usdgAddress} symbol="USDG" /> : null}
@@ -395,14 +450,14 @@ function LivePool() {
                 <WalletOffer address={usdgAddress} symbol="USDG" showAddress={false} onDone={() => setOffer(false)} />
               ) : null}
             </>
-          }
+          )}
         />
         <div className="flex flex-col gap-4">
           <GainsCard
             rows={gainRows}
             onClaim={claim}
-            disabled={busy || !address}
-            note={address ? "Gains accrue per asset and never expire." : "Connect a wallet to see your gains."}
+            reason={!address ? "Connect a wallet to see your gains." : busy ? IN_PROGRESS : null}
+            note="Gains accrue per asset and never expire."
           />
           <EarnCard />
         </div>
@@ -444,7 +499,8 @@ function DemoPool() {
           walletBalance={walletBalance}
           yourDeposit={yourDeposit}
           poolSize={poolSize}
-          disabled={!(Number.parseFloat(amount) > 0)}
+          reason={Number.parseFloat(amount) > 0 ? null : `Enter an amount to ${mode}.`}
+          quickReason={null}
           onSubmit={() => setSubmitted(true)}
           actionLabel={mode === "deposit" ? "Deposit" : "Withdraw"}
           note={
@@ -457,7 +513,7 @@ function DemoPool() {
           <GainsCard
             rows={gainRows}
             onClaim={() => setSubmitted(true)}
-            disabled={false}
+            reason={null}
             note="Demo balances from three liquidations."
           />
           <EarnCard />

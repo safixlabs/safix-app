@@ -1,6 +1,7 @@
 import { createConfig, createStorage, fallback, http, noopStorage } from "wagmi"
 import { coinbaseWallet, injected, walletConnect } from "wagmi/connectors"
 import { activeChain, localChain, robinhood, robinhoodTestnet } from "./chain"
+import { SUBMITTED_STORAGE_PREFIX } from "./submitted"
 
 const batch = { batch: { batchSize: 24, wait: 16 } } as const
 
@@ -33,8 +34,12 @@ const browserStorage = typeof window !== "undefined" ? window.localStorage : und
  * session state for an account that has just been disconnected, so all of it
  * goes.
  *
+ * The transactions the app recorded as this wallet's, kept so its history can
+ * list the ones that left no event, go too: on a shared machine they would say
+ * which wallet was here.
+ *
  * Nothing outside this list is touched. `localhost:3000` is a shared origin
- * across every local project, and the app's own preferences (`safix.`) are not
+ * across every local project, and the app's other preferences (`safix.`) are not
  * wallet state.
  */
 const WALLET_STORAGE_PREFIXES = [
@@ -46,7 +51,8 @@ const WALLET_STORAGE_PREFIXES = [
   "WCM_",
   "base-acc-sdk.",
   "cbwsdk.",
-  "-walletlink:"
+  "-walletlink:",
+  SUBMITTED_STORAGE_PREFIX
 ]
 
 /**
@@ -102,20 +108,8 @@ const connectors = [
     : [])
 ]
 
-/**
- * The endpoints the active chain is read through, in the order they are tried.
- * Exported so a health check can ask the same nodes the app asks, rather than
- * guessing at one.
- */
-export const rpcEndpoints: string[] = (
-  activeChain.id === localChain.id
-    ? [localChain.rpcUrls.default.http[0]]
-    : [
-        process.env.NEXT_PUBLIC_RPC_OVERRIDE,
-        process.env.NEXT_PUBLIC_RPC_FALLBACK,
-        activeChain.rpcUrls.default.http[0]
-      ]
-).filter((url): url is string => Boolean(url))
+/** The endpoints the active chain is read through, in the order they are tried; see lib/chain.ts. */
+export { rpcEndpoints } from "./chain"
 
 export const wagmiConfig = createConfig({
   chains: [activeChain, ...remainingChains],
@@ -141,5 +135,9 @@ export const wagmiConfig = createConfig({
     ]),
     [localChain.id]: transportFor([localChain.rpcUrls.default.http[0]])
   },
-  ssr: false
+  // The pages are prerendered with no wallet. With `ssr: false` wagmi restores a
+  // stored connection during the first client render, so that render names an
+  // account the prerendered HTML never had and hydration fails. `ssr: true`
+  // restores it just after mount instead, and reconnects from there.
+  ssr: true
 })

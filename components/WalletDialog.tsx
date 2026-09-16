@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useId, useState } from "react"
 import type { Connector } from "wagmi"
 import { useConnect } from "wagmi"
 import { track } from "@/lib/analytics"
@@ -8,6 +8,7 @@ import { humanError } from "@/lib/errors"
 import { walletConnectReady } from "@/lib/wagmi"
 import { hasBrowserWallet, walletOptions, type WalletOption } from "@/lib/wallets"
 import Portal from "./Portal"
+import { Reason } from "./ui"
 
 function WalletIcon({ option }: { option: WalletOption }) {
   if (option.icon) {
@@ -126,6 +127,8 @@ export default function WalletDialog({ open, onClose }: { open: boolean; onClose
     return () => window.removeEventListener("keydown", onKey)
   }, [open, onClose])
 
+  const reasonId = useId()
+
   if (!open) return null
 
   const pendingId = isPending ? (variables?.connector as Connector | undefined)?.id : undefined
@@ -190,6 +193,7 @@ export default function WalletDialog({ open, onClose }: { open: boolean; onClose
                       <button
                         onClick={() => pick(option.connector)}
                         disabled={isPending}
+                        aria-describedby={isPending ? reasonId : undefined}
                         className="flex w-full items-center gap-3.5 rounded-[3px] border border-line bg-carbon/30 px-4 py-3.5 text-left transition-colors hover:border-mint disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <WalletIcon option={option} />
@@ -208,6 +212,11 @@ export default function WalletDialog({ open, onClose }: { open: boolean; onClose
                     </li>
                   ))}
                 </ul>
+                {isPending ? (
+                  <div className="mt-3">
+                    <Reason id={reasonId}>Answer or cancel the request in your wallet first.</Reason>
+                  </div>
+                ) : null}
               </>
             )}
           </div>

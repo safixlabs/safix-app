@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useId, useMemo, useRef, useState } from "react"
 import type { Address } from "viem"
 import { useAccount, useReadContract, useReadContracts, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
 import { TokenHandle, WalletOffer } from "@/components/AddToWallet"
@@ -13,10 +13,12 @@ import {
   GhostButton,
   HealthBadge,
   HealthBar,
+  IN_PROGRESS,
   PageHeader,
   Panel,
   PrimaryButton,
   QuickAmounts,
+  Reason,
   SummaryRow,
   Usdg,
   UsdgMark
@@ -26,6 +28,7 @@ import { activeChain } from "@/lib/chain"
 import { collateralAssets, originationFeeRate, price, redemptionFeeRate, tokenAmount, usd } from "@/lib/demo"
 import { humanError } from "@/lib/errors"
 import { dropToLiquidation, healthStateOf, liquidationPrice1e18, priceToNumber } from "@/lib/risk"
+import { useRecordSubmission } from "@/lib/submitted"
 import {
   erc20Abi,
   erc8056Abi,
@@ -134,8 +137,12 @@ function LiveBorrow() {
     query: { enabled: Boolean(asset), retry: false }
   })
 
-  const { writeContract, data: txHash, isPending, error } = useWriteContract()
+  const { writeContract, data: txHash, isPending, error: writeError, variables } = useWriteContract()
   const receipt = useWaitForTransactionReceipt({ hash: txHash })
+  // The wallet can accept a transaction that then reverts in its block. That
+  // failure arrives on the receipt, and is as much a failure as a refused call.
+  const error = writeError ?? receipt.error
+  useRecordSubmission(txHash, variables, address)
   // The step to record if the transaction now in flight confirms.
   const pendingStep = useRef<AnalyticsEvent | undefined>(undefined)
 
@@ -291,6 +298,43 @@ function LiveBorrow() {
         ? "Acknowledge the liquidation risk first"
         : null
 
+  // What each panel says when its action is unavailable. The draw refusal is
+  // already the draw button's own label, so it is not said twice.
+  const symbol = asset?.symbol ?? "collateral"
+  const lockReasonId = useId()
+  const lockQuickId = useId()
+  const drawReasonId = useId()
+  const drawCeilingId = useId()
+  const repayReasonId = useId()
+  const repayQuickId = useId()
+  const lockReason = !address
+    ? "Connect a wallet to lock collateral."
+    : busy
+      ? IN_PROGRESS
+      : lockUnits === 0n
+        ? `Enter an amount of ${symbol} to lock.`
+        : null
+  const lockQuickReason = tokenBalance > 0n ? null : !address ? lockReason : `This wallet holds no ${symbol} to lock.`
+  const drawReason = !address
+    ? "Connect a wallet to draw."
+    : busy
+      ? IN_PROGRESS
+      : drawBlockedReason
+        ? null
+        : drawUnits === 0n
+          ? "Enter an amount to draw."
+          : null
+  const repayReason = !address
+    ? "Connect a wallet to repay."
+    : busy
+      ? IN_PROGRESS
+      : repayUnits === 0n
+        ? debt === 0n
+          ? "There is no debt to repay."
+          : "Enter an amount to repay."
+        : null
+  const repayQuickReason = debt > 0n ? null : !address ? repayReason : "There is no debt to repay."
+
   return (
     <div className="flex flex-col gap-4">
       <TxToast
@@ -356,11 +400,26 @@ function LiveBorrow() {
                 label={`${asset?.symbol ?? "collateral"} to lock`}
                 onPick={fraction => setLockAmount(tokenAmount(uiTokenAmount(tokenBalance) * fraction))}
                 disabled={tokenBalance === 0n}
+                describedBy={
+                  lockQuickReason === null ? undefined : lockQuickReason === lockReason ? lockReasonId : lockQuickId
+                }
               />
-              <PrimaryButton disabled={lockUnits === 0n || busy || !address} onClick={lock} className="w-full">
+              <Reason id={lockQuickId}>{lockQuickReason !== lockReason ? lockQuickReason : null}</Reason>
+              <PrimaryButton
+                disabled={lockUnits === 0n || busy || !address}
+                aria-describedby={lockReason ? lockReasonId : undefined}
+                onClick={lock}
+                className="w-full"
+              >
                 {busy ? "Confirming…" : needsLockApproval ? `Approve ${asset?.symbol}` : "Lock collateral"}
               </PrimaryButton>
-              <GhostButton size="sm" onClick={mintTestAsset} disabled={busy || !address}>
+              <Reason id={lockReasonId}>{lockReason}</Reason>
+              <GhostButton
+                size="sm"
+                onClick={mintTestAsset}
+                disabled={busy || !address}
+                aria-describedby={busy || !address ? lockReasonId : undefined}
+              >
                 Mint 10 test {asset?.symbol}
               </GhostButton>
               {offeredAsset ? (
@@ -415,14 +474,16 @@ function LiveBorrow() {
                     {usd(fromUsdgUnits(availableLiquidity))}
                   </span>
                 </div>
-                <p className="text-[12px] leading-[1.5] tracking-[-0.02em] text-haze">
+                <p id={drawCeilingId} className="text-[12px] leading-[1.5] tracking-[-0.02em] text-haze">
                   {binding === "liquidity"
                     ? "The pool is the tighter of the two right now, so that is the ceiling."
                     : binding === "collateral"
                       ? "Your collateral is the tighter of the two, so that is the ceiling. Lock more to raise it."
                       : collateral === 0n
                         ? "Lock collateral above to open a line of credit."
-                        : "This collateral is already drawn to its limit. Repay, or lock more, to draw again."}
+                        : maxDrawByCapacity === 0n
+                          ? "This collateral is already drawn to its limit. Repay, or lock more, to draw again."
+                          : "The pool has no idle liquidity right now, so nothing can be drawn until providers deposit or borrowers repay."}
                 </p>
               </div>
               <AmountField
@@ -442,6 +503,7 @@ function LiveBorrow() {
                   setAcceptedRisk(false)
                 }}
                 disabled={maxDraw === 0n}
+                describedBy={drawCeilingId}
               />
 
               <div className="flex flex-col divide-y divide-line border-y border-line">
@@ -486,11 +548,13 @@ function LiveBorrow() {
 
               <PrimaryButton
                 disabled={drawUnits === 0n || Boolean(drawBlockedReason) || busy || !address}
+                aria-describedby={drawReason ? drawReasonId : undefined}
                 onClick={draw}
                 className="w-full"
               >
                 {busy ? "Confirming…" : drawBlockedReason ?? <span className="inline-flex items-center gap-1.5">Draw <Usdg /></span>}
               </PrimaryButton>
+              <Reason id={drawReasonId}>{drawReason}</Reason>
               {usdgAddress && offer === usdgAddress ? (
                 <WalletOffer address={usdgAddress} symbol="USDG" onDone={dismissOffer} />
               ) : null}
@@ -514,16 +578,31 @@ function LiveBorrow() {
                 label="USDG to repay"
                 onPick={fraction => setRepayAmount((fromUsdgUnits(debt) * fraction).toFixed(2))}
                 disabled={debt === 0n}
+                describedBy={
+                  repayQuickReason === null ? undefined : repayQuickReason === repayReason ? repayReasonId : repayQuickId
+                }
               />
-              <PrimaryButton disabled={repayUnits === 0n || busy || !address} onClick={repay} className="w-full">
+              <Reason id={repayQuickId}>{repayQuickReason !== repayReason ? repayQuickReason : null}</Reason>
+              <PrimaryButton
+                disabled={repayUnits === 0n || busy || !address}
+                aria-describedby={repayReason ? repayReasonId : undefined}
+                onClick={repay}
+                className="w-full"
+              >
                 {busy ? "Confirming…" : needsRepayApproval ? <span className="inline-flex items-center gap-1.5">Approve <Usdg /></span> : "Repay"}
               </PrimaryButton>
+              <Reason id={repayReasonId}>{repayReason}</Reason>
 
               {hasPosition ? (
                 <div className="flex flex-col gap-2 border-t border-line pt-4">
                   <SummaryRow label={`Redemption fee (${Number(redeemBps) / 100}%)`} value={usd(fromUsdgUnits(closeOwed - debt))} />
                   <SummaryRow label="Total to close" value={usd(fromUsdgUnits(closeOwed))} />
-                  <GhostButton size="sm" onClick={closeOut} disabled={busy || !address}>
+                  <GhostButton
+                    size="sm"
+                    onClick={closeOut}
+                    disabled={busy || !address}
+                    aria-describedby={busy || !address ? repayReasonId : undefined}
+                  >
                     {needsCloseApproval ? `Approve ${usd(fromUsdgUnits(closeOwed))}` : "Close position and unlock collateral"}
                   </GhostButton>
                 </div>
@@ -563,6 +642,15 @@ function DemoBorrow() {
   const liqAfter = debtAfter > 0 ? (debtAfter * 10_000) / (asset.balance * liqThresholdBps) : 0
   const stateAfter = healthStateOf(healthAfter, liqThresholdBps, debtAfter > 0)
   const needsAcknowledgement = draw > 0 && (stateAfter === "atRisk" || stateAfter === "liquidatable")
+  // Over capacity is the button's own label; anything else that holds it back is said beneath it.
+  const drawReasonId = useId()
+  const drawReason = overCapacity
+    ? null
+    : draw <= 0
+      ? "Enter an amount to draw."
+      : needsAcknowledgement && !acceptedRisk
+        ? "Acknowledge the liquidation risk first."
+        : null
 
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[1.1fr_1fr] [&>*]:min-w-0">
@@ -670,10 +758,12 @@ function DemoBorrow() {
 
           <PrimaryButton
             disabled={draw <= 0 || overCapacity || (needsAcknowledgement && !acceptedRisk)}
+            aria-describedby={drawReason ? drawReasonId : undefined}
             className="w-full"
           >
             {overCapacity ? "Above what this collateral supports" : <span className="inline-flex items-center gap-1.5">Draw <Usdg /></span>}
           </PrimaryButton>
+          <Reason id={drawReasonId}>{drawReason}</Reason>
 
           <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">
             Demo mode: no pool contract configured yet.

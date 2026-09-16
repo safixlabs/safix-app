@@ -1,10 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useId, useState } from "react"
 import type { Address } from "viem"
 import { explorerAddressUrl } from "@/lib/chain"
 import { markOffered, useWalletAsset } from "@/lib/wallet-assets"
-import { GhostButton } from "./ui"
+import { GhostButton, Reason } from "./ui"
+
+/** Why the wallet buttons are held back while the wallet's own prompt is open. */
+const WALLET_ANSWER = "Waiting for your wallet to answer."
 
 const shortAddress = (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}`
 
@@ -72,15 +75,27 @@ function AddressLine({ address, name }: { address: Address; name: string }) {
  * request itself carries the token's own symbol and decimals, never this one.
  */
 export function TokenHandle({ address, symbol: fallback }: { address: Address; symbol: string }) {
-  const { symbol, ready, add, isPending } = useWalletAsset(address)
+  const { symbol, ready, reason, add, isPending } = useWalletAsset(address)
   const name = symbol ?? fallback
+  const reasonId = useId()
+  const why = isPending ? WALLET_ANSWER : reason
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-[12.5px] tracking-[-0.02em]">
-      <AddressLine address={address} name={name} />
-      <GhostButton size="xs" onClick={() => void add()} disabled={!ready || isPending}>
-        Add {name} to wallet
-      </GhostButton>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-[12.5px] tracking-[-0.02em]">
+        <AddressLine address={address} name={name} />
+        <GhostButton
+          size="xs"
+          onClick={() => void add()}
+          disabled={!ready || isPending}
+          aria-describedby={why ? reasonId : undefined}
+        >
+          Add {name} to wallet
+        </GhostButton>
+      </div>
+      <Reason id={reasonId} align="left">
+        {why}
+      </Reason>
     </div>
   )
 }
@@ -105,8 +120,10 @@ export function WalletOffer({
   showAddress?: boolean
   onDone: () => void
 }) {
-  const { symbol, ready, add, isPending } = useWalletAsset(address)
+  const { symbol, ready, reason, add, isPending } = useWalletAsset(address)
   const name = symbol ?? fallback
+  const reasonId = useId()
+  const why = isPending ? WALLET_ANSWER : reason
 
   const accept = async () => {
     await add()
@@ -129,15 +146,28 @@ export function WalletOffer({
       </p>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 tracking-[-0.02em]">
         <span className="flex flex-wrap items-center gap-2">
-          <GhostButton size="xs" onClick={() => void accept()} disabled={!ready || isPending}>
+          <GhostButton
+            size="xs"
+            onClick={() => void accept()}
+            disabled={!ready || isPending}
+            aria-describedby={why ? reasonId : undefined}
+          >
             Add {name} to wallet
           </GhostButton>
-          <GhostButton size="xs" onClick={decline} disabled={isPending}>
+          <GhostButton
+            size="xs"
+            onClick={decline}
+            disabled={isPending}
+            aria-describedby={isPending ? reasonId : undefined}
+          >
             Not now
           </GhostButton>
         </span>
         {showAddress ? <AddressLine address={address} name={name} /> : null}
       </div>
+      <Reason id={reasonId} align="left">
+        {why}
+      </Reason>
     </div>
   )
 }

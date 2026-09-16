@@ -87,7 +87,7 @@ log("fork is up")
 await assertContracts()
 
 const args = process.argv.slice(2)
-const command = args.length > 0 ? args : ["npx", "playwright", "test", "e2e/onchain.spec.ts", "e2e/states.spec.ts"]
+const command = args.length > 0 ? args : ["npx", "playwright", "test", "e2e/onchain.spec.ts", "e2e/states.spec.ts", "e2e/history.spec.ts"]
 log(`running: ${command.join(" ")}`)
 
 const appEnv = {
@@ -98,7 +98,8 @@ const appEnv = {
   NEXT_PUBLIC_DESK_ADDRESS: config.addresses.desk,
   NEXT_PUBLIC_ASSET_TBILL: config.addresses.tbill,
   NEXT_PUBLIC_ASSET_BNVDA: config.addresses.bnvda,
-  NEXT_PUBLIC_ASSET_TGOLD: config.addresses.tgold
+  NEXT_PUBLIC_ASSET_TGOLD: config.addresses.tgold,
+  NEXT_PUBLIC_DEPLOY_BLOCK: String(config.deployBlock)
 }
 
 const suite = spawn(command[0], command.slice(1), {

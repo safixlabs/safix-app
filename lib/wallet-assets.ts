@@ -77,7 +77,17 @@ export function useWalletAsset(token: Address | undefined) {
 
   // The request goes to whichever chain the wallet is on, so a wallet sitting
   // on another network would be handed an address that means nothing there.
-  const ready = isConnected && chainId === activeChain.id && Boolean(token && symbol && decimals !== undefined)
+  // Whatever holds the request back is said, rather than leaving the button grey.
+  const reason = !isConnected
+    ? "Connect a wallet first."
+    : chainId !== activeChain.id
+      ? `Switch the wallet to ${activeChain.name} first.`
+      : token && symbol && decimals !== undefined
+        ? null
+        : metadata.isError
+          ? "The token's details could not be read, so the wallet cannot be told what it is."
+          : "Reading the token's details…"
+  const ready = reason === null
 
   const add = useCallback(async () => {
     if (!token || !symbol || decimals === undefined) return false
@@ -94,5 +104,5 @@ export function useWalletAsset(token: Address | undefined) {
     }
   }, [token, symbol, decimals, mutateAsync])
 
-  return { symbol, decimals, ready, add, isPending }
+  return { symbol, decimals, ready, reason, add, isPending }
 }

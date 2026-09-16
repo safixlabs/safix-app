@@ -134,6 +134,21 @@ test.describe("risk gate", () => {
     await expect(dialog).toBeHidden()
     await expect(connect).toBeFocused()
   })
+
+  test("Continue says why it is held back until the box is ticked", async ({ page }) => {
+    await page.goto("/pool/")
+    await page.getByRole("button", { name: /Connect wallet|No wallet detected/ }).click()
+    const dialog = page.getByRole("dialog")
+    const proceed = dialog.getByRole("button", { name: "Continue" })
+
+    await expect(proceed).toBeDisabled()
+    await expect(proceed).toHaveAccessibleDescription("Tick the box above to continue.")
+    await expect(dialog.getByText("Tick the box above to continue.")).toBeVisible()
+
+    await dialog.getByRole("checkbox").check()
+    await expect(proceed).toBeEnabled()
+    await expect(dialog.getByText("Tick the box above to continue.")).toBeHidden()
+  })
 })
 
 test.describe("responsive", () => {
@@ -263,6 +278,36 @@ test.describe("screen reader", () => {
         return problems
       })
       expect(unnamed, `unnamed controls on ${path}`).toEqual([])
+    }
+  })
+
+  // A grey button says nothing. Every control that is disabled has to point, through
+  // aria-describedby, at a sentence that is on screen: text a screen reader reads
+  // with the control and a sighted user can see, not a tooltip only a mouse reaches.
+  test("every disabled control on the money screens says why", async ({ page }) => {
+    for (const path of ["/borrow/", "/pool/", "/partnerships/"]) {
+      await page.goto(path)
+      await page.waitForLoadState("networkidle")
+      const silent = await page.evaluate(() => {
+        const problems: string[] = []
+        for (const button of Array.from(document.querySelectorAll<HTMLButtonElement>("button:disabled"))) {
+          const name = button.getAttribute("aria-label") ?? button.textContent?.trim().slice(0, 40) ?? ""
+          if (button.hasAttribute("title")) problems.push(`"${name}" leans on a title attribute`)
+          const reasons = (button.getAttribute("aria-describedby") ?? "")
+            .split(/\s+/)
+            .filter(Boolean)
+            .map(id => document.getElementById(id))
+            .filter((node): node is HTMLElement => Boolean(node))
+            .filter(node => {
+              const box = node.getBoundingClientRect()
+              // A visually hidden node is 1px; a reason has to be readable on screen too.
+              return Boolean(node.textContent?.trim()) && node.checkVisibility() && box.width > 1 && box.height > 1
+            })
+          if (reasons.length === 0) problems.push(`"${name}" is disabled with no reason on screen`)
+        }
+        return problems
+      })
+      expect(silent, `disabled controls without a reason on ${path}`).toEqual([])
     }
   })
 

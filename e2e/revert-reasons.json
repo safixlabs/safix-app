@@ -1,0 +1,577 @@
+{
+  "source": "safixlabs/safix@586cca948538d7220eac0b2c839b2b2d24d4a9c2",
+  "path": "contracts/src",
+  "how": "Every string passed to require(...) or revert(...) in contracts/src at that commit, comments stripped, with the contract and function or modifier it is raised in. The contracts declare no custom errors.",
+  "reasons": {
+    "allowance": [
+      "MockERC20.transferFrom"
+    ],
+    "already queued": [
+      "SafixTimelock.queue"
+    ],
+    "asset cap": [
+      "SafixPool.draw"
+    ],
+    "asset off": [
+      "SafixPool.setAssetCaps",
+      "SafixPool.setPrice",
+      "SafixPool.setPriceFeed",
+      "SafixPool._requireUsablePrice",
+      "SafixPool.lockCollateral",
+      "SafixPool.draw"
+    ],
+    "bad amount": [
+      "PartnershipDesk.fund",
+      "SafixPool.withdrawReserve",
+      "SafixPool.withdraw",
+      "SafixPool.withdrawCollateral",
+      "SafixPool.repay"
+    ],
+    "bad band": [
+      "SafixPool.setPriceGuard"
+    ],
+    "bad config": [
+      "SafixPool.configureAsset"
+    ],
+    "bad deviation": [
+      "SafixPool.setPriceGuard"
+    ],
+    "bad feed answer": [
+      "SafixPool.currentPrice"
+    ],
+    "bad feed decimals": [
+      "SafixPool.setPriceFeed"
+    ],
+    "bad mask": [
+      "PassportRegistry.attest"
+    ],
+    "bad share": [
+      "PartnershipDesk.createPartnership"
+    ],
+    "balance": [
+      "MockERC20._move"
+    ],
+    "before deadline": [
+      "PartnershipDesk.declareDefault"
+    ],
+    "capital returned": [
+      "PartnershipDesk.declareDefault"
+    ],
+    "close position instead": [
+      "SafixPool.withdrawCollateral"
+    ],
+    "collateral cap": [
+      "SafixPool.lockCollateral"
+    ],
+    "delay too short": [
+      "SafixTimelock.constructor",
+      "SafixTimelock.setDelay"
+    ],
+    "deposits paused": [
+      "SafixPool.deposit"
+    ],
+    "draws paused": [
+      "SafixPool.draw"
+    ],
+    "exceeds ltv": [
+      "SafixPool.draw"
+    ],
+    "expired": [
+      "SafixTimelock.execute"
+    ],
+    "fee too high": [
+      "SafixPool.setFees"
+    ],
+    "feed down": [
+      "MockAggregatorV3.latestRoundData",
+      "MockAggregatorV3.getRoundData"
+    ],
+    "feed unavailable": [
+      "SafixPool._requireUsablePrice"
+    ],
+    "funding paused": [
+      "PartnershipDesk.fund"
+    ],
+    "global cap": [
+      "SafixPool.draw"
+    ],
+    "healthy": [
+      "SafixPool.absorbBadDebt",
+      "SafixPool.liquidate"
+    ],
+    "illiquid": [
+      "SafixPool.withdraw",
+      "SafixPool.draw"
+    ],
+    "liquidations paused": [
+      "SafixPool.liquidate"
+    ],
+    "needs audit": [
+      "PartnershipDesk.settle"
+    ],
+    "no dust threshold": [
+      "SafixPool.absorbBadDebt"
+    ],
+    "no goal": [
+      "PartnershipDesk.createPartnership"
+    ],
+    "no operator": [
+      "PartnershipDesk.createPartnership"
+    ],
+    "no position": [
+      "SafixPool.closePosition"
+    ],
+    "not a single check": [
+      "PassportRegistry._requireSingleCheck"
+    ],
+    "not active": [
+      "PartnershipDesk.approveSettlement",
+      "PartnershipDesk.reportReturn",
+      "PartnershipDesk.settle",
+      "PartnershipDesk.declareDefault"
+    ],
+    "not admin": [
+      "SafixTimelock.onlyAdmin"
+    ],
+    "not attester": [
+      "PassportRegistry.onlyAttester"
+    ],
+    "not auditor": [
+      "PartnershipDesk.approveSettlement"
+    ],
+    "not claimable": [
+      "PartnershipDesk.claim"
+    ],
+    "not dust": [
+      "SafixPool.absorbBadDebt"
+    ],
+    "not funding": [
+      "PartnershipDesk.fund",
+      "PartnershipDesk.activate",
+      "PartnershipDesk.cancel"
+    ],
+    "not guardian": [
+      "PartnershipDesk.pause",
+      "SafixPool.pause"
+    ],
+    "not operator": [
+      "PartnershipDesk.reportReturn",
+      "PartnershipDesk.claimOperator"
+    ],
+    "not owner": [
+      "PartnershipDesk.onlyOwner",
+      "PassportRegistry.onlyOwner",
+      "SafixPool.onlyOwner"
+    ],
+    "not price updater": [
+      "SafixPool.setPrice"
+    ],
+    "not queued": [
+      "SafixTimelock.execute",
+      "SafixTimelock.cancel"
+    ],
+    "not settled": [
+      "PartnershipDesk.claimOperator"
+    ],
+    "not timelock": [
+      "PartnershipDesk.onlyTimelock",
+      "SafixPool.onlyTimelock",
+      "SafixTimelock.onlySelf"
+    ],
+    "nothing to claim": [
+      "PartnershipDesk.claim"
+    ],
+    "nothing to pause": [
+      "Guardable._pause"
+    ],
+    "nothing to unpause": [
+      "Guardable._unpause"
+    ],
+    "paid": [
+      "PartnershipDesk.claimOperator"
+    ],
+    "passport required": [
+      "SafixPool.draw"
+    ],
+    "past deadline": [
+      "PartnershipDesk.fund"
+    ],
+    "pool too small": [
+      "SafixPool.absorbBadDebt",
+      "SafixPool.liquidate"
+    ],
+    "position too small": [
+      "SafixPool.draw",
+      "SafixPool.repay"
+    ],
+    "price above band": [
+      "SafixPool.setPrice",
+      "SafixPool._requireUsablePrice"
+    ],
+    "price below band": [
+      "SafixPool.setPrice",
+      "SafixPool._requireUsablePrice"
+    ],
+    "price jump": [
+      "SafixPool.setPrice",
+      "SafixPool._requireUsablePrice"
+    ],
+    "reentrancy": [
+      "PartnershipDesk.nonReentrant",
+      "SafixPool.nonReentrant"
+    ],
+    "reporting before funding ends": [
+      "PartnershipDesk.createPartnership"
+    ],
+    "sequencer down": [
+      "SafixPool._requireUsablePrice"
+    ],
+    "sequencer grace period": [
+      "SafixPool._requireUsablePrice"
+    ],
+    "share too high": [
+      "SafixPool.setReserveFeeShare"
+    ],
+    "stale price": [
+      "SafixPool._requireUsablePrice"
+    ],
+    "too early": [
+      "SafixTimelock.execute"
+    ],
+    "too high": [
+      "SafixPool.setLiquidationIncentive"
+    ],
+    "transfer failed": [
+      "PartnershipDesk.fund",
+      "PartnershipDesk.activate",
+      "PartnershipDesk.reportReturn",
+      "PartnershipDesk.claim",
+      "PartnershipDesk.claimOperator",
+      "SafixPool.fundReserve",
+      "SafixPool.withdrawReserve",
+      "SafixPool.collectProtocolFees",
+      "SafixPool.deposit",
+      "SafixPool.withdraw",
+      "SafixPool.claimGains",
+      "SafixPool.lockCollateral",
+      "SafixPool.withdrawCollateral",
+      "SafixPool.draw",
+      "SafixPool.repay",
+      "SafixPool.closePosition",
+      "SafixPool.liquidate"
+    ],
+    "unfunded": [
+      "PartnershipDesk.activate"
+    ],
+    "would break ltv": [
+      "SafixPool.withdrawCollateral"
+    ],
+    "zero": [
+      "PartnershipDesk.reportReturn",
+      "SafixPool.fundReserve",
+      "SafixPool.deposit",
+      "SafixPool.lockCollateral",
+      "SafixPool.draw",
+      "SafixPool.liquidate"
+    ],
+    "zero admin": [
+      "SafixTimelock.constructor",
+      "SafixTimelock.setAdmin"
+    ],
+    "zero owner": [
+      "PartnershipDesk.setOwner",
+      "PassportRegistry.setOwner",
+      "SafixPool.setOwner"
+    ],
+    "zero target": [
+      "SafixTimelock.queue"
+    ]
+  },
+  "deployed": {
+    "record": "safixlabs/safix deployments/testnet.json at ec913ceeef567acf166398ac82316f5eadf2e138, the deployment e2e/deployment.json forks",
+    "source": "safixlabs/safix@c1ed0965a2f5e87d6e68ad05e3ac256196a303c0",
+    "how": "The same extraction over contracts/src at the commit that deployment's bytecode was built from.",
+    "reasons": {
+      "allowance": [
+        "MockERC20.transferFrom"
+      ],
+      "already queued": [
+        "SafixTimelock.queue"
+      ],
+      "asset cap": [
+        "SafixPool.draw"
+      ],
+      "asset off": [
+        "SafixPool.setAssetCaps",
+        "SafixPool.setPrice",
+        "SafixPool.setPriceFeed",
+        "SafixPool._requireUsablePrice",
+        "SafixPool.lockCollateral",
+        "SafixPool.draw"
+      ],
+      "bad amount": [
+        "PartnershipDesk.fund",
+        "SafixPool.withdrawReserve",
+        "SafixPool.withdraw",
+        "SafixPool.withdrawCollateral",
+        "SafixPool.repay"
+      ],
+      "bad band": [
+        "SafixPool.setPriceGuard"
+      ],
+      "bad config": [
+        "SafixPool.configureAsset"
+      ],
+      "bad deviation": [
+        "SafixPool.setPriceGuard"
+      ],
+      "bad feed answer": [
+        "SafixPool.currentPrice"
+      ],
+      "bad feed decimals": [
+        "SafixPool.setPriceFeed"
+      ],
+      "bad mask": [
+        "PassportRegistry.attest"
+      ],
+      "bad share": [
+        "PartnershipDesk.createPartnership"
+      ],
+      "balance": [
+        "MockERC20._move"
+      ],
+      "before deadline": [
+        "PartnershipDesk.declareDefault"
+      ],
+      "close position instead": [
+        "SafixPool.withdrawCollateral"
+      ],
+      "collateral cap": [
+        "SafixPool.lockCollateral"
+      ],
+      "delay too short": [
+        "SafixTimelock.constructor",
+        "SafixTimelock.setDelay"
+      ],
+      "deposits paused": [
+        "SafixPool.deposit"
+      ],
+      "draws paused": [
+        "SafixPool.draw"
+      ],
+      "exceeds ltv": [
+        "SafixPool.draw"
+      ],
+      "expired": [
+        "SafixTimelock.execute"
+      ],
+      "fee too high": [
+        "SafixPool.setFees"
+      ],
+      "feed down": [
+        "MockAggregatorV3.latestRoundData",
+        "MockAggregatorV3.getRoundData"
+      ],
+      "feed unavailable": [
+        "SafixPool._requireUsablePrice"
+      ],
+      "funding paused": [
+        "PartnershipDesk.fund"
+      ],
+      "global cap": [
+        "SafixPool.draw"
+      ],
+      "healthy": [
+        "SafixPool.absorbBadDebt",
+        "SafixPool.liquidate"
+      ],
+      "illiquid": [
+        "SafixPool.withdraw",
+        "SafixPool.draw"
+      ],
+      "liquidations paused": [
+        "SafixPool.liquidate"
+      ],
+      "needs audit": [
+        "PartnershipDesk.settle"
+      ],
+      "no dust threshold": [
+        "SafixPool.absorbBadDebt"
+      ],
+      "no goal": [
+        "PartnershipDesk.createPartnership"
+      ],
+      "no operator": [
+        "PartnershipDesk.createPartnership"
+      ],
+      "no position": [
+        "SafixPool.closePosition"
+      ],
+      "not a single check": [
+        "PassportRegistry._requireSingleCheck"
+      ],
+      "not active": [
+        "PartnershipDesk.approveSettlement",
+        "PartnershipDesk.reportReturn",
+        "PartnershipDesk.settle",
+        "PartnershipDesk.declareDefault"
+      ],
+      "not admin": [
+        "SafixTimelock.onlyAdmin"
+      ],
+      "not attester": [
+        "PassportRegistry.onlyAttester"
+      ],
+      "not auditor": [
+        "PartnershipDesk.approveSettlement"
+      ],
+      "not claimable": [
+        "PartnershipDesk.claim"
+      ],
+      "not dust": [
+        "SafixPool.absorbBadDebt"
+      ],
+      "not funding": [
+        "PartnershipDesk.fund",
+        "PartnershipDesk.activate",
+        "PartnershipDesk.cancel"
+      ],
+      "not guardian": [
+        "PartnershipDesk.pause",
+        "SafixPool.pause"
+      ],
+      "not operator": [
+        "PartnershipDesk.reportReturn",
+        "PartnershipDesk.claimOperator"
+      ],
+      "not owner": [
+        "PartnershipDesk.onlyOwner",
+        "PassportRegistry.onlyOwner",
+        "SafixPool.onlyOwner"
+      ],
+      "not price updater": [
+        "SafixPool.setPrice"
+      ],
+      "not queued": [
+        "SafixTimelock.execute",
+        "SafixTimelock.cancel"
+      ],
+      "not settled": [
+        "PartnershipDesk.claimOperator"
+      ],
+      "not timelock": [
+        "PartnershipDesk.onlyTimelock",
+        "SafixPool.onlyTimelock",
+        "SafixTimelock.onlySelf"
+      ],
+      "nothing to claim": [
+        "PartnershipDesk.claim"
+      ],
+      "nothing to pause": [
+        "Guardable._pause"
+      ],
+      "nothing to unpause": [
+        "Guardable._unpause"
+      ],
+      "paid": [
+        "PartnershipDesk.claimOperator"
+      ],
+      "passport required": [
+        "SafixPool.draw"
+      ],
+      "past deadline": [
+        "PartnershipDesk.fund"
+      ],
+      "pool too small": [
+        "SafixPool.absorbBadDebt",
+        "SafixPool.liquidate"
+      ],
+      "position too small": [
+        "SafixPool.draw",
+        "SafixPool.repay"
+      ],
+      "price above band": [
+        "SafixPool.setPrice",
+        "SafixPool._requireUsablePrice"
+      ],
+      "price below band": [
+        "SafixPool.setPrice",
+        "SafixPool._requireUsablePrice"
+      ],
+      "price jump": [
+        "SafixPool.setPrice",
+        "SafixPool._requireUsablePrice"
+      ],
+      "reentrancy": [
+        "PartnershipDesk.nonReentrant",
+        "SafixPool.nonReentrant"
+      ],
+      "reporting before funding ends": [
+        "PartnershipDesk.createPartnership"
+      ],
+      "sequencer down": [
+        "SafixPool._requireUsablePrice"
+      ],
+      "sequencer grace period": [
+        "SafixPool._requireUsablePrice"
+      ],
+      "share too high": [
+        "SafixPool.setReserveFeeShare"
+      ],
+      "stale price": [
+        "SafixPool._requireUsablePrice"
+      ],
+      "too early": [
+        "SafixTimelock.execute"
+      ],
+      "too high": [
+        "SafixPool.setLiquidationIncentive"
+      ],
+      "transfer failed": [
+        "PartnershipDesk.fund",
+        "PartnershipDesk.activate",
+        "PartnershipDesk.reportReturn",
+        "PartnershipDesk.claim",
+        "PartnershipDesk.claimOperator",
+        "SafixPool.fundReserve",
+        "SafixPool.withdrawReserve",
+        "SafixPool.collectProtocolFees",
+        "SafixPool.deposit",
+        "SafixPool.withdraw",
+        "SafixPool.claimGains",
+        "SafixPool.lockCollateral",
+        "SafixPool.withdrawCollateral",
+        "SafixPool.draw",
+        "SafixPool.repay",
+        "SafixPool.closePosition",
+        "SafixPool.liquidate"
+      ],
+      "unfunded": [
+        "PartnershipDesk.activate"
+      ],
+      "would break ltv": [
+        "SafixPool.withdrawCollateral"
+      ],
+      "zero": [
+        "PartnershipDesk.reportReturn",
+        "SafixPool.fundReserve",
+        "SafixPool.deposit",
+        "SafixPool.lockCollateral",
+        "SafixPool.draw",
+        "SafixPool.liquidate"
+      ],
+      "zero admin": [
+        "SafixTimelock.constructor",
+        "SafixTimelock.setAdmin"
+      ],
+      "zero owner": [
+        "PartnershipDesk.setOwner",
+        "PassportRegistry.setOwner",
+        "SafixPool.setOwner"
+      ],
+      "zero target": [
+        "SafixTimelock.queue"
+      ]
+    }
+  }
+}
