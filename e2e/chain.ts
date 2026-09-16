@@ -135,6 +135,19 @@ export async function pendingHashesFrom(account: Address): Promise<Hex[]> {
   return queued ? Object.values(queued[1]).map(transaction => transaction.hash) : []
 }
 
+/**
+ * The age this asset's price may reach before the pool stops acting on it, or
+ * null on a deployment with no price guard at all.
+ */
+export async function maxPriceAgeOf(asset: Address): Promise<number | null> {
+  try {
+    const [maxPriceAge] = await publicClient.readContract({ abi: poolAbi, address: pool, functionName: "priceGuards", args: [asset] })
+    return Number(maxPriceAge)
+  } catch {
+    return null
+  }
+}
+
 export const depositOf = (who: Address) =>
   publicClient.readContract({ abi: poolAbi, address: pool, functionName: "compoundedDepositOf", args: [who] })
 

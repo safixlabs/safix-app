@@ -51,6 +51,13 @@ export const safixPoolAbi = [
   { type: "function", name: "positions", stateMutability: "view", inputs: [{ name: "borrower", type: "address" }, { name: "asset", type: "address" }], outputs: [{ name: "collateral", type: "uint256" }, { name: "debt", type: "uint256" }, { name: "totalDrawn", type: "uint256" }] },
   { type: "function", name: "assetConfig", stateMutability: "view", inputs: [{ name: "asset", type: "address" }], outputs: [{ name: "enabled", type: "bool" }, { name: "maxLtvBps", type: "uint16" }, { name: "liqThresholdBps", type: "uint16" }, { name: "priceUsd1e18", type: "uint256" }] },
   { type: "function", name: "currentPrice", stateMutability: "view", inputs: [{ name: "asset", type: "address" }], outputs: [{ name: "price1e18", type: "uint256" }, { name: "updatedAt", type: "uint256" }] },
+  // The age a price may reach before the pool refuses to act on it, per asset.
+  // Older pools have no guard at all; the read fails there and the screens say
+  // how old a price is without claiming a limit that does not exist.
+  { type: "function", name: "priceGuards", stateMutability: "view", inputs: [{ name: "asset", type: "address" }], outputs: [{ name: "maxPriceAge", type: "uint64" }, { name: "maxDeviationBps", type: "uint16" }, { name: "minPrice1e18", type: "uint256" }, { name: "maxPrice1e18", type: "uint256" }] },
+  // The pool's own verdict on the price it holds, in the order of its PriceStatus
+  // enum. Reading it is how the screen refuses exactly what the contract refuses.
+  { type: "function", name: "priceStatus", stateMutability: "view", inputs: [{ name: "asset", type: "address" }], outputs: [{ name: "status", type: "uint8" }, { name: "price1e18", type: "uint256" }, { name: "updatedAt", type: "uint256" }] },
   { type: "function", name: "collateralValueStable", stateMutability: "view", inputs: [{ name: "asset", type: "address" }, { name: "amount", type: "uint256" }], outputs: [{ type: "uint256" }] },
   { type: "function", name: "isLiquidatable", stateMutability: "view", inputs: [{ name: "borrower", type: "address" }, { name: "asset", type: "address" }], outputs: [{ type: "bool" }] }
 ] as const

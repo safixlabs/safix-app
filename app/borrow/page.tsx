@@ -27,6 +27,8 @@ import { track, type AnalyticsEvent } from "@/lib/analytics"
 import { activeChain } from "@/lib/chain"
 import { collateralAssets, originationFeeRate, price, redemptionFeeRate, tokenAmount, usd } from "@/lib/demo"
 import { humanError } from "@/lib/errors"
+import { useVisibleInterval } from "@/lib/polling"
+import { priceAgeLine, priceAgeLineForAge, priceFreshness, priceVerdict, reconcileFreshness } from "@/lib/price"
 import { dropToLiquidation, healthStateOf, liquidationPrice1e18, priceToNumber } from "@/lib/risk"
 import { useRecordSubmission } from "@/lib/submitted"
 import {
@@ -52,6 +54,8 @@ function RiskPanel({
   health,
   liqThresholdBps,
   currentPrice,
+  priceLine,
+  priceIsStale,
   liquidationPrice,
   symbol
 }: {
@@ -60,6 +64,9 @@ function RiskPanel({
   health: number
   liqThresholdBps: number
   currentPrice: number
+  /** How old this price is, in words, beside the number it qualifies. */
+  priceLine: string
+  priceIsStale: boolean
   liquidationPrice: number
   symbol?: string
 }) {
@@ -76,7 +83,17 @@ function RiskPanel({
         <div className="flex flex-col divide-y divide-line border-y border-line">
           <SummaryRow label="Collateral value" value={usd(collateralValue)} />
           <SummaryRow label="Debt" value={usd(debt)} />
-          <SummaryRow label={`${symbol ?? "Asset"} price now`} value={price(currentPrice)} />
+          <SummaryRow
+            label={`${symbol ?? "Asset"} price now`}
+            value={
+              <span className="inline-flex flex-wrap items-baseline justify-end gap-x-2">
+                <span>{price(currentPrice)}</span>
+                <span className={`text-[12px] tracking-[-0.02em] ${priceIsStale ? "text-amber" : "text-haze"}`}>
+                  {priceLine}
+                </span>
+              </span>
+            }
+          />
           <SummaryRow
             label="Liquidation price"
             value={hasDebt ? price(liquidationPrice) : "No debt drawn"}
@@ -113,9 +130,22 @@ function LiveBorrow() {
       { chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "currentPrice", args: asset ? [asset.address] : undefined },
       { chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "availableLiquidity" },
       { chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "originationFeeBps" },
-      { chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "redemptionFeeBps" }
+      { chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "redemptionFeeBps" },
+      // The age this asset's price may reach, and whether the pool will act on the
+      // one it holds. Both are absent on an older pool, where the reads fail and
+      // the screen quotes the age without claiming a limit or a refusal.
+      { chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "priceGuards", args: asset ? [asset.address] : undefined },
+      { chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "priceStatus", args: asset ? [asset.address] : undefined }
     ],
     query: { enabled: Boolean(asset) }
+  })
+
+  // A price ages while somebody reads the screen, so the age is recomputed and the
+  // pool's verdict re-read on the same interval every other screen refreshes on.
+  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000))
+  useVisibleInterval(() => {
+    setNow(Math.floor(Date.now() / 1000))
+    poolReads.refetch()
   })
 
   const walletReads = useReadContracts({
@@ -169,9 +199,22 @@ function LiveBorrow() {
   const feeBps = BigInt((poolReads.data?.[3]?.result as number | undefined) ?? 50)
   const redeemBps = BigInt((poolReads.data?.[4]?.result as number | undefined) ?? 30)
 
+  const guard = poolReads.data?.[5]?.result as readonly [bigint, number, bigint, bigint] | undefined
+  const priceStatus = poolReads.data?.[6]?.result as readonly [number, bigint, bigint] | undefined
+
   const maxLtvBps = config?.[1] ?? 0
   const liqThresholdBps = config?.[2] ?? 9000
   const price1e18 = priceResult?.[0] ?? 0n
+
+  // Read from the chain, never repeated here: the guards differ per asset and
+  // change on chain. Absent means the pool has no age limit for this asset.
+  const maxPriceAge = guard ? Number(guard[0]) : null
+  const statusCode = priceStatus ? Number(priceStatus[0]) : null
+  // The pool's own answer decides what is refused; this clock only says how old,
+  // and the line never contradicts the refusal beside it.
+  const freshness = reconcileFreshness(priceFreshness(Number(priceResult?.[1] ?? 0n), maxPriceAge, now), statusCode)
+  const priceLine = priceAgeLine(freshness)
+  const verdict = priceVerdict(statusCode)
 
   const position = walletReads.data?.[0]?.result as readonly [bigint, bigint, bigint] | undefined
   const collateral = position?.[0] ?? 0n
@@ -245,11 +288,17 @@ function LiveBorrow() {
 
   const draw = () => {
     if (!asset || !poolAddress || drawUnits === 0n) return
-    if (overCapacity || overLiquidity || (needsAcknowledgement && !acceptedRisk)) {
+    if (!verdict.usable || overCapacity || overLiquidity || (needsAcknowledgement && !acceptedRisk)) {
       // A refusal is a step too: it is the one that says why the funnel ends.
       track("draw_blocked", {
         asset: asset.symbol,
-        reason: overCapacity ? "capacity" : overLiquidity ? "liquidity" : "unacknowledged"
+        reason: !verdict.usable
+          ? "price"
+          : overCapacity
+            ? "capacity"
+            : overLiquidity
+              ? "liquidity"
+              : "unacknowledged"
       })
       return
     }
@@ -290,7 +339,9 @@ function LiveBorrow() {
   const offeredAsset = offer ? liveAssets.find(candidate => candidate.address === offer) : undefined
   const dismissOffer = () => setOffer(undefined)
 
-  const drawBlockedReason = overCapacity
+  const drawBlockedReason = verdict.label
+    ? verdict.label
+    : overCapacity
     ? "Above what this collateral supports"
     : overLiquidity
       ? "More than the pool has available"
@@ -315,9 +366,13 @@ function LiveBorrow() {
         ? `Enter an amount of ${symbol} to lock.`
         : null
   const lockQuickReason = tokenBalance > 0n ? null : !address ? lockReason : `This wallet holds no ${symbol} to lock.`
-  const drawReason = !address
-    ? "Connect a wallet to draw."
-    : busy
+  // A price the pool will not act on refuses the draw for everyone, wallet or not,
+  // so its explanation comes first.
+  const drawReason = !verdict.usable
+    ? verdict.note
+    : !address
+      ? "Connect a wallet to draw."
+      : busy
       ? IN_PROGRESS
       : drawBlockedReason
         ? null
@@ -441,6 +496,8 @@ function LiveBorrow() {
             health={healthNow}
             liqThresholdBps={liqThresholdBps}
             currentPrice={currentPriceValue}
+            priceLine={priceLine}
+            priceIsStale={!verdict.usable}
             liquidationPrice={liqNow}
             symbol={asset?.symbol}
           />
@@ -472,6 +529,12 @@ function LiveBorrow() {
                   </span>
                   <span className="text-haze [font-variant-numeric:tabular-nums]">
                     {usd(fromUsdgUnits(availableLiquidity))}
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between text-[12.5px] tracking-[-0.02em]">
+                  <span className="text-haze">{asset?.symbol ?? "Asset"} price</span>
+                  <span className={`[font-variant-numeric:tabular-nums] ${verdict.usable ? "text-haze" : "text-amber"}`}>
+                    {price(currentPriceValue)} · {priceLine}
                   </span>
                 </div>
                 <p id={drawCeilingId} className="text-[12px] leading-[1.5] tracking-[-0.02em] text-haze">
@@ -619,6 +682,10 @@ function LiveBorrow() {
   )
 }
 
+/** The demo prices carry an age, worded the same way the live screen words one. */
+const demoPriceLine = (asset: { pricedSecondsAgo: number; maxPriceAge: number }) =>
+  priceAgeLineForAge(asset.pricedSecondsAgo, asset.maxPriceAge)
+
 function DemoBorrow() {
   const [assetId, setAssetId] = useState(collateralAssets[0].id)
   const [amount, setAmount] = useState("")
@@ -720,6 +787,15 @@ function DemoBorrow() {
 
           <div className="flex flex-col divide-y divide-line border-y border-line">
             <SummaryRow label="Collateral locked" value={`${tokenAmount(asset.balance)} ${asset.symbol} · ${usd(collateralValue)}`} />
+            <SummaryRow
+              label={`${asset.symbol} price now`}
+              value={
+                <span className="inline-flex flex-wrap items-baseline justify-end gap-x-2">
+                  <span>{price(asset.price)}</span>
+                  <span className="text-[12px] tracking-[-0.02em] text-haze">{demoPriceLine(asset)}</span>
+                </span>
+              }
+            />
             <SummaryRow
               label={`One-time fee now (${(originationFeeRate * 100).toFixed(1)}%)`}
               value={usd(fee)}

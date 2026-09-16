@@ -10,14 +10,17 @@ import {
   desk,
   deskAbi,
   erc20Abi,
+  maxPriceAgeOf,
   partnership,
   passTime,
   pool,
   poolAbi,
   publicClient,
+  refreshPrices,
   revertChain,
   snapshotChain,
   stopImpersonating,
+  tbill,
   tgold,
   usdgToken,
   waitFor,
@@ -32,6 +35,15 @@ const borrower = accounts.borrower.address as Address
 
 test.describe("states", () => {
   test.skip(!live, "run with npm run e2e:live")
+
+  // The borrow screen refuses a draw on a price the pool will not act on, and a
+  // fork starts from the chain as it stands, where a manual price can already be
+  // past its guard. These states are about capacity and balances, not price age,
+  // so they start from prices the pool accepts rather than from whatever ran first.
+  test.beforeAll(async () => {
+    if (!live) return
+    await refreshPrices([tbill, tgold])
+  })
 
   test("no wallet at all: the screen still works and offers a way in", async ({ page }) => {
     // Nothing is installed, so window.ethereum is absent.
@@ -106,6 +118,37 @@ test.describe("states", () => {
     await panel.locator("button.w-full").filter({ hasText: /Deposit/ }).last().click()
 
     await expect(page.getByText("That is more than the wallet holds.").first()).toBeVisible({ timeout: 30_000 })
+  })
+
+  // The whole point of the price age: the refusal arrives on the screen, before a
+  // signature, rather than as a revert after one.
+  test("a price past its age is refused on the screen, not at signature", async ({ page }) => {
+    const maxPriceAge = await maxPriceAgeOf(tgold)
+    test.skip(maxPriceAge === null, "this deployment has no price guard, so no price can go stale")
+
+    // The clock is moved past the asset's own limit; the rest of the suite needs it back.
+    const snapshot = await snapshotChain()
+    try {
+      await installWallet(page)
+      await passTime((maxPriceAge ?? 0) + 60)
+
+      // The pool itself now refuses the price: PriceStatus.Stale is 5.
+      const [status] = await publicClient.readContract({ abi: poolAbi, address: pool, functionName: "priceStatus", args: [tgold] })
+      expect(status).toBe(5)
+
+      await page.goto("/borrow/")
+      await connect(page)
+      await page.getByRole("button", { name: "Select tGOLD as collateral" }).click()
+
+      // Said beside the number it qualifies, and said as a refusal on the action.
+      await expect(page.getByText(/priced .*, past the .* this asset allows/).first()).toBeVisible({ timeout: 30_000 })
+      const draw = page.locator("section").filter({ hasText: "Draw USDG" }).locator("button.w-full").last()
+      await expect(draw).toHaveText("Price too old to draw against")
+      await expect(draw).toBeDisabled()
+      await expect(page.getByText(/Drawing becomes available again once the price is updated/)).toBeVisible()
+    } finally {
+      await revertChain(snapshot)
+    }
   })
 
   test("capacity exceeded: the draw is refused before it is signed", async ({ page }) => {

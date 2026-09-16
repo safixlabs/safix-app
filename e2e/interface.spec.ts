@@ -78,6 +78,16 @@ test.describe("interface", () => {
     await expect(page.getByRole("button", { name: /Acknowledge the liquidation risk first|Draw/ })).toBeVisible()
   })
 
+  // A price without an age teaches that the question does not exist. It does: the
+  // pool refuses to act on a price past the age its own guard allows.
+  test("a quoted price says how old it is", async ({ page }) => {
+    await page.goto("/borrow/")
+    await expect(page.getByText(/^priced /).first()).toBeVisible()
+
+    await page.goto("/")
+    await expect(page.getByText(/, priced /).first()).toBeVisible()
+  })
+
   test("pool preview updates the resulting deposit and share", async ({ page }) => {
     await page.goto("/pool/")
     const amount = page.getByPlaceholder("0.00").first()

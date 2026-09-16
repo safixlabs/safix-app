@@ -6,9 +6,10 @@ import { useAccount, usePublicClient } from "wagmi"
 import { reportError } from "@/lib/monitoring"
 import { AssetMark, HealthBadge, HealthBar, PageHeader, Panel, Stat, UsdgMark } from "@/components/ui"
 import { activeChain } from "@/lib/chain"
-import { demoPositions, maxLtvFor, passport, price, tokenAmount, usd } from "@/lib/demo"
+import { demoPositions, demoPriceAge, maxLtvFor, passport, price, tokenAmount, usd } from "@/lib/demo"
 import { reportReadFailure, reportReadSuccess } from "@/lib/health"
 import { useVisibleInterval } from "@/lib/polling"
+import { priceAgeLine, priceAgeLineForAge, priceFreshness } from "@/lib/price"
 import { distanceToLiquidation, healthStateOf, liquidationPrice1e18, priceToNumber } from "@/lib/risk"
 import { ONE_1E18, erc8056Abi, fromUsdgUnits, isLive, liveAssets, poolAddress, safixPoolAbi, uiTokenAmount } from "@/lib/safix"
 
@@ -23,6 +24,8 @@ type PositionRow = {
   liquidationPrice: number
   /** The asset's own threshold. Health means nothing without it. */
   liqThresholdBps: number
+  /** How old the price is, in words. A health figure is only as current as this. */
+  priceLine: string
 }
 
 function PositionLine({ row }: { row: PositionRow }) {
@@ -66,6 +69,7 @@ function PositionLine({ row }: { row: PositionRow }) {
           <span>
             {row.symbol} now{" "}
             <span className="text-mist">{price(row.price)}</span>
+            {row.priceLine ? <span>, {row.priceLine}</span> : null}
           </span>
           <span>
             liquidates at{" "}
@@ -121,7 +125,7 @@ function LiveDashboard() {
       // Everything that does not depend on another read goes out together, so
       // multicall folds it into one call. Only the collateral values have to
       // wait, because they are asked per position size.
-      const [positionReads, configReads, priceReads, compounded, multipliers] = await Promise.all([
+      const [positionReads, configReads, priceReads, guardReads, compounded, multipliers] = await Promise.all([
         Promise.all(
           liveAssets.map(asset =>
             client.readContract({
@@ -140,6 +144,15 @@ function LiveDashboard() {
         Promise.all(
           liveAssets.map(asset =>
             client.readContract({ abi: safixPoolAbi, address: pool, functionName: "currentPrice", args: [asset.address] })
+          )
+        ),
+        Promise.all(
+          liveAssets.map(asset =>
+            client
+              .readContract({ abi: safixPoolAbi, address: pool, functionName: "priceGuards", args: [asset.address] })
+              // A pool with no guard for this asset is not a broken read: the age is
+              // still worth quoting, it simply has no limit to be measured against.
+              .catch(() => null)
           )
         ),
         client.readContract({
@@ -167,12 +180,14 @@ function LiveDashboard() {
         )
       )
       if (cancelled) return
+      const at = Math.floor(Date.now() / 1000)
       setRows(
         liveAssets
           .map((asset, index) => {
             const collateral = positionReads[index][0]
             const debt = positionReads[index][1]
             const liqThresholdBps = configReads[index][2]
+            const guard = guardReads[index]
             return {
               symbol: asset.symbol,
               locked: uiTokenAmount(collateral, multipliers[index]),
@@ -180,7 +195,10 @@ function LiveDashboard() {
               debt: fromUsdgUnits(debt),
               price: priceToNumber(priceReads[index][0]),
               liquidationPrice: priceToNumber(liquidationPrice1e18(debt, collateral, liqThresholdBps)),
-              liqThresholdBps
+              liqThresholdBps,
+              priceLine: priceAgeLine(
+                priceFreshness(Number(priceReads[index][1]), guard ? Number(guard[0]) : null, at)
+              )
             }
           })
           .filter(row => row.locked > 0 || row.debt > 0)
@@ -259,6 +277,7 @@ function DemoDashboard() {
     const unitPrice = position.locked > 0 ? position.value / position.locked : 0
     const liquidationPrice =
       position.locked > 0 ? (position.debt * 10_000) / (position.locked * liqThresholdBps) : 0
+    const age = demoPriceAge(position.symbol)
     return {
       symbol: position.symbol,
       locked: position.locked,
@@ -266,7 +285,8 @@ function DemoDashboard() {
       debt: position.debt,
       price: unitPrice,
       liquidationPrice,
-      liqThresholdBps
+      liqThresholdBps,
+      priceLine: age ? priceAgeLineForAge(age.pricedSecondsAgo, age.maxPriceAge) : ""
     }
   })
 

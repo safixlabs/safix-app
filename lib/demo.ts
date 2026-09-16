@@ -4,6 +4,10 @@ export type CollateralAsset = {
   symbol: string
   kind: string
   price: number
+  /** Seconds since this price was posted, as the pool would report it. */
+  pricedSecondsAgo: number
+  /** The age this asset's price may reach before the pool stops acting on it. */
+  maxPriceAge: number
   balance: number
   maxLtv: number
 }
@@ -16,12 +20,22 @@ export type Position = {
   debt: number
 }
 
+// The demo prices carry an age too. A screen that quotes a price without one
+// teaches that the question does not exist, and the live screen's whole point is
+// that it does. These are all inside their asset's limit, so the demo shows what
+// a working price looks like rather than a warning nobody can act on.
 export const collateralAssets: CollateralAsset[] = [
-  { id: "tbill", name: "Tokenized treasury 3M", symbol: "tBILL", kind: "Government debt", price: 100.42, balance: 85, maxLtv: 0.8 },
-  { id: "bnvda", name: "Tokenized Nvidia", symbol: "bNVDA", kind: "Tokenized stock", price: 172.35, balance: 40, maxLtv: 0.55 },
-  { id: "baapl", name: "Tokenized Apple", symbol: "bAAPL", kind: "Tokenized stock", price: 246.1, balance: 22, maxLtv: 0.55 },
-  { id: "tgold", name: "Tokenized gold", symbol: "tGOLD", kind: "Commodity", price: 3392.8, balance: 1.6, maxLtv: 0.65 }
+  { id: "tbill", name: "Tokenized treasury 3M", symbol: "tBILL", kind: "Government debt", price: 100.42, pricedSecondsAgo: 9 * 60, maxPriceAge: 86_400, balance: 85, maxLtv: 0.8 },
+  { id: "bnvda", name: "Tokenized Nvidia", symbol: "bNVDA", kind: "Tokenized stock", price: 172.35, pricedSecondsAgo: 2 * 60, maxPriceAge: 3_600, balance: 40, maxLtv: 0.55 },
+  { id: "baapl", name: "Tokenized Apple", symbol: "bAAPL", kind: "Tokenized stock", price: 246.1, pricedSecondsAgo: 4 * 60, maxPriceAge: 3_600, balance: 22, maxLtv: 0.55 },
+  { id: "tgold", name: "Tokenized gold", symbol: "tGOLD", kind: "Commodity", price: 3392.8, pricedSecondsAgo: 25 * 60, maxPriceAge: 86_400, balance: 1.6, maxLtv: 0.65 }
 ]
+
+/** The age a demo asset's price carries, looked up the way the live screens look it up. */
+export const demoPriceAge = (symbol: string) => {
+  const asset = collateralAssets.find(candidate => candidate.symbol === symbol)
+  return asset ? { pricedSecondsAgo: asset.pricedSecondsAgo, maxPriceAge: asset.maxPriceAge } : null
+}
 
 export const demoPositions: Position[] = [
   { id: "pos-1", symbol: "tBILL", locked: 60, value: 6025.2, debt: 4100 },
