@@ -56,6 +56,7 @@ export const contractMessages: Record<string, string> = {
   "not dust": "That position is worth too much to be written off as dust.",
 
   // Partnerships
+  "no partnership": "There is no partnership with that id.",
   "reporting before funding ends": "The reporting deadline has to fall after the funding deadline.",
   "no operator": "A partnership needs an operator address.",
   "bad share": "The operator's share cannot be more than the whole profit.",

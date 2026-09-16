@@ -1,5 +1,5 @@
 {
-  "source": "safixlabs/safix@586cca948538d7220eac0b2c839b2b2d24d4a9c2",
+  "source": "safixlabs/safix@450b71deb69c2afd7ffce6af9076c941e22ee6e6",
   "path": "contracts/src",
   "how": "Every string passed to require(...) or revert(...) in contracts/src at that commit, comments stripped, with the contract and function or modifier it is raised in. The contracts declare no custom errors.",
   "reasons": {
@@ -117,6 +117,9 @@
     ],
     "no operator": [
       "PartnershipDesk.createPartnership"
+    ],
+    "no partnership": [
+      "PartnershipDesk.cancelUnactivated"
     ],
     "no position": [
       "SafixPool.closePosition"
