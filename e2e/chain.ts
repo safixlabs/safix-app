@@ -8,7 +8,7 @@ import {
   type Hex
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
-import { CHAIN_ID, RPC_URL, deployment } from "./deployment"
+import { CHAIN_ID, RPC_URL, accounts, deployment } from "./deployment"
 
 export const chain = defineChain({
   id: CHAIN_ID,
@@ -207,6 +207,47 @@ export async function lowerPrice(asset: Address, target: bigint) {
   } finally {
     await stopImpersonating(owner)
   }
+}
+
+/**
+ * Collateral locked in the borrower's position, so a screen has capacity to show.
+ *
+ * Prices are refreshed first. A fork starts from the chain as it stands, where a
+ * manually posted price can already be past the age its guard allows, and the
+ * borrow screen refuses a draw on a price the pool will not act on.
+ */
+export async function givenCollateral(asset: Address, amount?: bigint) {
+  await refreshPrices([asset])
+  // Enough that the pool's own minimum position is drawable against it. A fixed
+  // amount here would be a number typed beside a minimum that lives on chain.
+  amount ??= (await positionSizing(asset, 2n)).collateral
+  const borrower = accounts.borrower.address as Address
+  const wallet = walletFor(accounts.borrower.key)
+  await waitFor(await wallet.writeContract({ abi: erc20Abi, address: asset, functionName: "mint", args: [borrower, amount] }))
+  await waitFor(await wallet.writeContract({ abi: erc20Abi, address: asset, functionName: "approve", args: [pool, amount] }))
+  await waitFor(await wallet.writeContract({ abi: poolAbi, address: pool, functionName: "lockCollateral", args: [asset, amount] }))
+}
+
+/** USDG in the wallet, so a deposit screen has something to offer. */
+export async function givenUsdg(amount = 10_000_000_000n) {
+  const borrower = accounts.borrower.address as Address
+  const wallet = walletFor(accounts.borrower.key)
+  await waitFor(await wallet.writeContract({ abi: erc20Abi, address: usdgToken, functionName: "mint", args: [borrower, amount] }))
+}
+
+/**
+ * The same, with a draw against it, for a screen that has to show a live debt.
+ *
+ * The size is read from the pool rather than typed: the minimum position and the
+ * asset's borrowing limit both live on chain and both can change, and a number
+ * written here would be a second source of truth that silently goes stale.
+ */
+export async function givenDebt(asset: Address) {
+  await refreshPrices([asset])
+  const { drawn } = await positionSizing(asset, 2n)
+  await givenCollateral(asset)
+  const wallet = walletFor(accounts.borrower.key)
+  await waitFor(await wallet.writeContract({ abi: poolAbi, address: pool, functionName: "draw", args: [asset, drawn] }))
 }
 
 /**

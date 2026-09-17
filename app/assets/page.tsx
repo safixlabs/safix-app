@@ -2,15 +2,10 @@
 
 import { useMemo, useState } from "react"
 import { AssetMark, PageHeader, Panel, Stat } from "@/components/ui"
-import { collateralAssets } from "@/lib/demo"
-import { isLive, liveAssets } from "@/lib/safix"
+import { collateralAssets } from "@/lib/safix"
 import { chainTokens, tokenRegistry, underlyingTicker, type ChainToken } from "@/lib/tokens"
 
-const accepted = new Set(
-  (isLive ? liveAssets.map(asset => asset.symbol) : collateralAssets.map(asset => asset.symbol)).map(symbol =>
-    underlyingTicker(symbol)
-  )
-)
+const accepted = new Set(collateralAssets.map(asset => underlyingTicker(asset.symbol)))
 
 const shortAddress = (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}`
 

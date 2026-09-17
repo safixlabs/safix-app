@@ -7,6 +7,12 @@ import { expect, test } from "@playwright/test"
  * rather than any one account's numbers. Animation is disabled and the whole
  * page is captured, so a panel that grows, collapses or reflows shows up as a
  * diff. Baselines are per platform; CI's are Linux, and are the ones committed.
+ *
+ * Every figure on these screens is read from the chain, so the figures move
+ * between runs. They are masked rather than compared: what is asserted is that
+ * a number of that size sits in that place, which is the layout question. The
+ * mask keeps the element's own box, so a figure that grows enough to reflow the
+ * panel around it still shows up.
  */
 const screens = [
   { path: "/", name: "dashboard" },
@@ -38,7 +44,8 @@ test.describe("layout", () => {
       await expect(page).toHaveScreenshot(`${screen.name}.png`, {
         fullPage: true,
         maxDiffPixelRatio: 0.01,
-        animations: "disabled"
+        animations: "disabled",
+        mask: [page.locator("[data-figure]")]
       })
     })
   }

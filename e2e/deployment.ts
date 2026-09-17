@@ -13,24 +13,33 @@
  */
 
 import config from "./deployment.json"
+import deployments from "../data/deployments.json"
+
+const recorded = deployments.testnet
 
 export const FORK_URL = process.env.E2E_FORK_URL ?? config.forkUrl
 export const RPC_URL = process.env.E2E_RPC_URL ?? `http://127.0.0.1:${config.port}`
 export const CHAIN_ID = Number(process.env.E2E_CHAIN_ID ?? config.chainId)
 export const CHAIN_ID_HEX = `0x${CHAIN_ID.toString(16)}` as const
 /** Block the deployment started at, which is where the app reads its logs from. */
-export const DEPLOY_BLOCK = BigInt(process.env.NEXT_PUBLIC_DEPLOY_BLOCK ?? config.deployBlock)
+export const DEPLOY_BLOCK = BigInt(process.env.NEXT_PUBLIC_DEPLOY_BLOCK ?? recorded.deployBlock)
 
 const address = (name: string, fallback: string) => (process.env[name] ?? fallback).toLowerCase()
 
+const asset = (symbol: string) => {
+  const found = recorded.assets.find(candidate => candidate.symbol === symbol)
+  if (!found) throw new Error(`data/deployments.json records no ${symbol}`)
+  return found.address
+}
+
 export const deployment = {
-  pool: address("NEXT_PUBLIC_POOL_ADDRESS", config.addresses.pool),
-  usdg: address("NEXT_PUBLIC_USDG_ADDRESS", config.addresses.usdg),
-  registry: address("NEXT_PUBLIC_REGISTRY_ADDRESS", config.addresses.registry),
-  desk: address("NEXT_PUBLIC_DESK_ADDRESS", config.addresses.desk),
-  tbill: address("NEXT_PUBLIC_ASSET_TBILL", config.addresses.tbill),
-  bnvda: address("NEXT_PUBLIC_ASSET_BNVDA", config.addresses.bnvda),
-  tgold: address("NEXT_PUBLIC_ASSET_TGOLD", config.addresses.tgold)
+  pool: address("NEXT_PUBLIC_POOL_ADDRESS", recorded.addresses.pool),
+  usdg: address("NEXT_PUBLIC_USDG_ADDRESS", recorded.addresses.usdg),
+  registry: address("NEXT_PUBLIC_REGISTRY_ADDRESS", recorded.addresses.registry),
+  desk: address("NEXT_PUBLIC_DESK_ADDRESS", recorded.addresses.desk),
+  tbill: address("NEXT_PUBLIC_ASSET_TBILL", asset("tBILL")),
+  bnvda: address("NEXT_PUBLIC_ASSET_BNVDA", asset("bNVDA")),
+  tgold: address("NEXT_PUBLIC_ASSET_TGOLD", asset("tGOLD"))
 } as const
 
 /**

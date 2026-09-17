@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test"
 import config from "../site.config.json"
+import { givenCollateral, givenDebt, givenUsdg, revertChain, snapshotChain, tbill } from "./chain"
+import { connect, installWallet } from "./wallet"
 
 const surfaces: Record<string, { role: string; subdomain: string | null; currentUrl: string | null }> =
   config.surfaces
@@ -67,7 +69,11 @@ test.describe("interface", () => {
   })
 
   test("borrow preview reacts to the amount and warns near liquidation", async ({ page }) => {
+    const snapshot = await snapshotChain()
+    await installWallet(page)
+    await givenCollateral(tbill)
     await page.goto("/borrow/")
+    await connect(page)
     const amount = page.getByPlaceholder("0.00").first()
     await clickWhenLive(page, page.getByRole("button", { name: "Use the maximum USDG to draw" }), async () => {
       await expect(amount).not.toHaveValue("", { timeout: 3_000 })
@@ -76,26 +82,40 @@ test.describe("interface", () => {
     await expect(page.getByText("Liquidation price after")).toBeVisible()
     await expect(page.getByText("I understand the risk")).toBeVisible()
     await expect(page.getByRole("button", { name: /Acknowledge the liquidation risk first|Draw/ })).toBeVisible()
+    await revertChain(snapshot)
   })
 
   // A price without an age teaches that the question does not exist. It does: the
   // pool refuses to act on a price past the age its own guard allows.
   test("a quoted price says how old it is", async ({ page }) => {
+    // The borrow screen quotes a price with no wallet at all; the overview quotes
+    // one per position, so it needs a position to quote.
     await page.goto("/borrow/")
     await expect(page.getByText(/^priced /).first()).toBeVisible()
 
+    const snapshot = await snapshotChain()
+    await installWallet(page)
+    // The overview quotes a price beside a position's health, and health needs debt.
+    await givenDebt(tbill)
     await page.goto("/")
+    await connect(page)
     await expect(page.getByText(/, priced /).first()).toBeVisible()
+    await revertChain(snapshot)
   })
 
   test("pool preview updates the resulting deposit and share", async ({ page }) => {
+    const snapshot = await snapshotChain()
+    await installWallet(page)
+    await givenUsdg()
     await page.goto("/pool/")
+    await connect(page)
     const amount = page.getByPlaceholder("0.00").first()
     await clickWhenLive(page, page.getByRole("button", { name: "Use 50 percent of USDG to deposit" }), async () => {
       await expect(amount).not.toHaveValue("", { timeout: 3_000 })
     })
     await expect(page.getByText("Your deposit after")).toBeVisible()
     await expect(page.getByText("Share of pool after")).toBeVisible()
+    await revertChain(snapshot)
   })
 
   test("documentation and legal links are reachable from the footer", async ({ page }) => {

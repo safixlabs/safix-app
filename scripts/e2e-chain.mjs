@@ -12,6 +12,10 @@ import { readFileSync } from "node:fs"
 import process from "node:process"
 
 const config = JSON.parse(readFileSync(new URL("../e2e/deployment.json", import.meta.url), "utf8"))
+// The addresses come from the record the app itself reads, so the suite and the
+// interface can never be pointed at two different deployments.
+const recorded = JSON.parse(readFileSync(new URL("../data/deployments.json", import.meta.url), "utf8")).testnet
+const assetAddress = symbol => recorded.assets.find(asset => asset.symbol === symbol).address
 
 const FORK_URL = process.env.E2E_FORK_URL ?? config.forkUrl
 const PORT = Number(process.env.E2E_CHAIN_PORT ?? config.port)
@@ -48,7 +52,7 @@ const waitForChain = async () => {
 
 /** Fails loudly rather than letting the suite report a hundred empty screens. */
 const assertContracts = async () => {
-  const pool = (process.env.NEXT_PUBLIC_POOL_ADDRESS ?? config.addresses.pool).toLowerCase()
+  const pool = (process.env.NEXT_PUBLIC_POOL_ADDRESS ?? recorded.addresses.pool).toLowerCase()
   const code = await rpc("eth_getCode", [pool, "latest"])
   if (!code || code === "0x") {
     throw new Error(`no contract at ${pool} on the fork. Is E2E_FORK_URL pointing at the right chain?`)
@@ -87,19 +91,35 @@ log("fork is up")
 await assertContracts()
 
 const args = process.argv.slice(2)
-const command = args.length > 0 ? args : ["npx", "playwright", "test", "e2e/onchain.spec.ts", "e2e/states.spec.ts", "e2e/history.spec.ts"]
+// Every screen in this app reads a chain: there is no second source of numbers,
+// so every suite that renders one runs here. Only the two that test pure
+// functions, the revert table and the price age rules, need no chain at all.
+const command =
+  args.length > 0
+    ? args
+    : [
+        "npx",
+        "playwright",
+        "test",
+        "e2e/onchain.spec.ts",
+        "e2e/states.spec.ts",
+        "e2e/history.spec.ts",
+        "e2e/interface.spec.ts",
+        "e2e/a11y.spec.ts",
+        "e2e/visual.spec.ts"
+      ]
 log(`running: ${command.join(" ")}`)
 
 const appEnv = {
   NEXT_PUBLIC_CHAIN: "local",
-  NEXT_PUBLIC_POOL_ADDRESS: config.addresses.pool,
-  NEXT_PUBLIC_USDG_ADDRESS: config.addresses.usdg,
-  NEXT_PUBLIC_REGISTRY_ADDRESS: config.addresses.registry,
-  NEXT_PUBLIC_DESK_ADDRESS: config.addresses.desk,
-  NEXT_PUBLIC_ASSET_TBILL: config.addresses.tbill,
-  NEXT_PUBLIC_ASSET_BNVDA: config.addresses.bnvda,
-  NEXT_PUBLIC_ASSET_TGOLD: config.addresses.tgold,
-  NEXT_PUBLIC_DEPLOY_BLOCK: String(config.deployBlock)
+  NEXT_PUBLIC_POOL_ADDRESS: recorded.addresses.pool,
+  NEXT_PUBLIC_USDG_ADDRESS: recorded.addresses.usdg,
+  NEXT_PUBLIC_REGISTRY_ADDRESS: recorded.addresses.registry,
+  NEXT_PUBLIC_DESK_ADDRESS: recorded.addresses.desk,
+  NEXT_PUBLIC_ASSET_TBILL: assetAddress("tBILL"),
+  NEXT_PUBLIC_ASSET_BNVDA: assetAddress("bNVDA"),
+  NEXT_PUBLIC_ASSET_TGOLD: assetAddress("tGOLD"),
+  NEXT_PUBLIC_DEPLOY_BLOCK: String(recorded.deployBlock)
 }
 
 const suite = spawn(command[0], command.slice(1), {

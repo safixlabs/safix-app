@@ -1,9 +1,9 @@
 "use client"
 
 import { explorerTxUrl } from "@/lib/chain"
-import { usd } from "@/lib/demo"
+import { usd } from "@/lib/format"
 import type { HistoryRow as ActivityRow } from "@/lib/history"
-import { deskAddress, fromTokenUnits, fromUsdgUnits, liveAssets, poolAddress, usdgAddress } from "@/lib/safix"
+import { deskAddress, fromTokenUnits, fromUsdgUnits, collateralAssets, poolAddress, usdgAddress } from "@/lib/safix"
 import type { SubmissionStatus, SubmittedRow } from "@/lib/submitted"
 import { useWalletHistory } from "@/lib/wallet-history"
 import { Panel } from "./ui"
@@ -12,7 +12,7 @@ const same = (a?: string | null, b?: string | null) => Boolean(a && b && a.toLow
 
 const symbolFor = (asset: string | null | undefined) =>
   asset
-    ? (liveAssets.find(candidate => same(candidate.address, asset))?.symbol ?? "collateral")
+    ? (collateralAssets.find(candidate => same(candidate.address, asset))?.symbol ?? "collateral")
     : "collateral"
 
 const tokenSymbol = (token: string) => (same(token, usdgAddress) ? "USDG" : symbolFor(token))

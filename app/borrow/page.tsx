@@ -14,6 +14,7 @@ import {
   HealthBadge,
   HealthBar,
   IN_PROGRESS,
+  NotDeployed,
   PageHeader,
   Panel,
   PrimaryButton,
@@ -25,10 +26,10 @@ import {
 } from "@/components/ui"
 import { track, type AnalyticsEvent } from "@/lib/analytics"
 import { activeChain } from "@/lib/chain"
-import { collateralAssets, originationFeeRate, price, redemptionFeeRate, tokenAmount, usd } from "@/lib/demo"
+import { price, tokenAmount, usd } from "@/lib/format"
 import { humanError } from "@/lib/errors"
 import { useVisibleInterval } from "@/lib/polling"
-import { priceAgeLine, priceAgeLineForAge, priceFreshness, priceVerdict, reconcileFreshness } from "@/lib/price"
+import { priceAgeLine, priceFreshness, priceVerdict, reconcileFreshness } from "@/lib/price"
 import { dropToLiquidation, healthStateOf, liquidationPrice1e18, priceToNumber } from "@/lib/risk"
 import { useRecordSubmission } from "@/lib/submitted"
 import {
@@ -36,8 +37,9 @@ import {
   erc8056Abi,
   floorTo,
   fromUsdgUnits,
-  isLive,
-  liveAssets,
+  hasDeployment,
+  deploymentLabel,
+  collateralAssets,
   poolAddress,
   safixPoolAbi,
   uiTokenAmount,
@@ -122,7 +124,7 @@ function LiveBorrow() {
   const pendingOffer = useRef<Address | undefined>(undefined)
   const [offer, setOffer] = useState<Address | undefined>(undefined)
 
-  const asset = liveAssets[assetIndex]
+  const asset = collateralAssets[assetIndex]
 
   const poolReads = useReadContracts({
     contracts: [
@@ -272,7 +274,28 @@ function LiveBorrow() {
   const liqAfter = priceToNumber(liquidationPrice1e18(debtAfter, collateral, liqThresholdBps))
 
   const needsLockApproval = lockUnits > 0n && tokenAllowance < lockUnits
-  const needsRepayApproval = repayUnits > 0n && usdgAllowance < repayUnits
+  // What the pool will actually pull for this repayment. The redemption fee is
+  // charged on the principal the repayment retires, so it is more than the amount
+  // typed, and an approval for the amount alone leaves the transfer short. The
+  // pool is asked rather than the arithmetic repeated here. A pool too old to
+  // answer charges no fee on a repayment, and the amount is the whole of it.
+  const owedRead = useReadContract({
+    chainId: activeChain.id,
+    abi: safixPoolAbi,
+    address: poolAddress,
+    functionName: "repaymentOwed",
+    args: address && asset && repayUnits > 0n ? [address, asset.address, repayUnits] : undefined,
+    query: { enabled: Boolean(address && asset) && repayUnits > 0n }
+  })
+  const owed = owedRead.data as readonly [bigint, bigint] | undefined
+  // What the repayment settles. The pool takes the whole debt rather than leave
+  // less than a minimum position behind, so an amount typed just under that line
+  // settles more than it says, and the screen has to say so before the signature.
+  const repayRetired = owed?.[0] ?? repayUnits
+  const repayFee = owed?.[1] ?? 0n
+  const repayOwed = repayRetired + repayFee
+
+  const needsRepayApproval = repayOwed > 0n && usdgAllowance < repayOwed
   const needsCloseApproval = closeOwed > 0n && usdgAllowance < closeOwed
 
   const lock = () => {
@@ -313,7 +336,7 @@ function LiveBorrow() {
   const repay = () => {
     if (!asset || !poolAddress || !usdgAddress || repayUnits === 0n) return
     if (needsRepayApproval) {
-      writeContract({ chainId: activeChain.id, abi: erc20Abi, address: usdgAddress, functionName: "approve", args: [poolAddress, repayUnits] })
+      writeContract({ chainId: activeChain.id, abi: erc20Abi, address: usdgAddress, functionName: "approve", args: [poolAddress, repayOwed] })
     } else {
       pendingStep.current = "repay_signed"
       writeContract({ chainId: activeChain.id, abi: safixPoolAbi, address: poolAddress, functionName: "repay", args: [asset.address, repayUnits] })
@@ -336,7 +359,7 @@ function LiveBorrow() {
     writeContract({ chainId: activeChain.id, abi: erc20Abi, address: asset.address, functionName: "mint", args: [address, 10n * 10n ** 18n] })
   }
 
-  const offeredAsset = offer ? liveAssets.find(candidate => candidate.address === offer) : undefined
+  const offeredAsset = offer ? collateralAssets.find(candidate => candidate.address === offer) : undefined
   const dismissOffer = () => setOffer(undefined)
 
   const drawBlockedReason = verdict.label
@@ -404,7 +427,7 @@ function LiveBorrow() {
         <div className="flex flex-col gap-4">
           <Panel title="Collateral">
             <ul className="flex flex-col gap-2.5">
-              {liveAssets.map((candidate, index) => (
+              {collateralAssets.map((candidate, index) => (
                 <li key={candidate.address}>
                   <button
                     aria-label={`Select ${candidate.symbol} as collateral`}
@@ -656,6 +679,21 @@ function LiveBorrow() {
               </PrimaryButton>
               <Reason id={repayReasonId}>{repayReason}</Reason>
 
+              {repayOwed > repayUnits ? (
+                <div className="flex flex-col gap-2 border-t border-line pt-4">
+                  {repayRetired > repayUnits ? (
+                    <SummaryRow
+                      label="Settles the whole debt"
+                      value={usd(fromUsdgUnits(repayRetired))}
+                    />
+                  ) : null}
+                  {repayFee > 0n ? (
+                    <SummaryRow label={`Redemption fee (${Number(redeemBps) / 100}%)`} value={usd(fromUsdgUnits(repayFee))} />
+                  ) : null}
+                  <SummaryRow label="Total taken from the wallet" value={usd(fromUsdgUnits(repayOwed))} />
+                </div>
+              ) : null}
+
               {hasPosition ? (
                 <div className="flex flex-col gap-2 border-t border-line pt-4">
                   <SummaryRow label={`Redemption fee (${Number(redeemBps) / 100}%)`} value={usd(fromUsdgUnits(closeOwed - debt))} />
@@ -682,183 +720,19 @@ function LiveBorrow() {
   )
 }
 
-/** The demo prices carry an age, worded the same way the live screen words one. */
-const demoPriceLine = (asset: { pricedSecondsAgo: number; maxPriceAge: number }) =>
-  priceAgeLineForAge(asset.pricedSecondsAgo, asset.maxPriceAge)
-
-function DemoBorrow() {
-  const [assetId, setAssetId] = useState(collateralAssets[0].id)
-  const [amount, setAmount] = useState("")
-  const [acceptedRisk, setAcceptedRisk] = useState(false)
-
-  const asset = collateralAssets.find(candidate => candidate.id === assetId) ?? collateralAssets[0]
-  const collateralValue = asset.price * asset.balance
-  const capacity = collateralValue * asset.maxLtv
-  const maxDraw = Math.floor((capacity / (1 + originationFeeRate)) * 100) / 100
-  const liqThresholdBps = Math.round((asset.maxLtv + 0.1) * 10_000)
-
-  const draw = useMemo(() => {
-    const parsed = Number.parseFloat(amount)
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
-  }, [amount])
-
-  const fee = draw * originationFeeRate
-  const debtAfter = draw + fee
-  const overCapacity = debtAfter > capacity + 0.01
-  const healthAfter = debtAfter > 0 ? collateralValue / debtAfter : 0
-  const liqAfter = debtAfter > 0 ? (debtAfter * 10_000) / (asset.balance * liqThresholdBps) : 0
-  const stateAfter = healthStateOf(healthAfter, liqThresholdBps, debtAfter > 0)
-  const needsAcknowledgement = draw > 0 && (stateAfter === "atRisk" || stateAfter === "liquidatable")
-  // Over capacity is the button's own label; anything else that holds it back is said beneath it.
-  const drawReasonId = useId()
-  const drawReason = overCapacity
-    ? null
-    : draw <= 0
-      ? "Enter an amount to draw."
-      : needsAcknowledgement && !acceptedRisk
-        ? "Acknowledge the liquidation risk first."
-        : null
-
-  return (
-    <div className="grid items-start gap-4 lg:grid-cols-[1.1fr_1fr] [&>*]:min-w-0">
-      <Panel title="Collateral">
-        <ul className="flex flex-col gap-2.5">
-          {collateralAssets.map(candidate => (
-            <li key={candidate.id}>
-              <button
-                aria-label={`Select ${candidate.symbol} as collateral`}
-                aria-pressed={candidate.id === assetId}
-                onClick={() => {
-                  setAssetId(candidate.id)
-                  setAcceptedRisk(false)
-                }}
-                className={`flex w-full items-center justify-between gap-3 rounded-[3px] border px-4 py-3.5 text-left transition-colors ${
-                  candidate.id === assetId ? "border-mint bg-carbon/60" : "border-control bg-carbon/30 hover:border-mint"
-                }`}
-              >
-                <span className="flex min-w-0 items-center gap-3">
-                  <AssetMark symbol={candidate.symbol} className="h-9 w-9" />
-                  <span className="min-w-0">
-                    <span className="block text-[14.5px] font-semibold tracking-[-0.01em] text-fog">
-                      {candidate.symbol}
-                    </span>
-                    <span className="mt-0.5 block truncate text-[12px] tracking-[-0.02em] text-haze">
-                      {candidate.name} · {candidate.kind}
-                    </span>
-                  </span>
-                </span>
-                <span className="text-right">
-                  <span className="block text-[13.5px] text-mist">
-                    {usd(candidate.price * candidate.balance)}
-                  </span>
-                  <span className="mt-0.5 block text-[12px] tracking-[-0.02em] text-haze">
-                    max LTV {(candidate.maxLtv * 100).toFixed(0)}%
-                  </span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </Panel>
-
-      <Panel title={<><UsdgMark className="h-[18px] w-[18px]" />Draw USDG</>}>
-        <div className="flex flex-col gap-4">
-          <div className="flex items-baseline justify-between text-[12.5px] tracking-[-0.02em] text-haze">
-            <span>Available to draw</span>
-            <span className="text-mist">{usd(maxDraw)}</span>
-          </div>
-          <AmountField
-            inputMode="decimal"
-            aria-label="Amount of USDG to draw"
-            placeholder="0.00"
-            value={amount}
-            onChange={event => {
-              setAmount(event.target.value)
-              setAcceptedRisk(false)
-            }}
-          />
-          <QuickAmounts
-            label="USDG to draw"
-            onPick={fraction => {
-              setAmount((maxDraw * fraction).toFixed(2))
-              setAcceptedRisk(false)
-            }}
-          />
-
-          <div className="flex flex-col divide-y divide-line border-y border-line">
-            <SummaryRow label="Collateral locked" value={`${tokenAmount(asset.balance)} ${asset.symbol} · ${usd(collateralValue)}`} />
-            <SummaryRow
-              label={`${asset.symbol} price now`}
-              value={
-                <span className="inline-flex flex-wrap items-baseline justify-end gap-x-2">
-                  <span>{price(asset.price)}</span>
-                  <span className="text-[12px] tracking-[-0.02em] text-haze">{demoPriceLine(asset)}</span>
-                </span>
-              }
-            />
-            <SummaryRow
-              label={`One-time fee now (${(originationFeeRate * 100).toFixed(1)}%)`}
-              value={usd(fee)}
-            />
-            <SummaryRow
-              label={`Redemption fee at close (${(redemptionFeeRate * 100).toFixed(1)}%)`}
-              value={usd(draw * redemptionFeeRate)}
-            />
-            <SummaryRow label="Interest" value="None, ever" />
-            <SummaryRow label="Debt after draw" value={usd(debtAfter)} />
-            <SummaryRow label="Liquidation price after" value={debtAfter > 0 ? price(liqAfter) : "No debt"} />
-            <div className="flex items-center justify-between gap-4 py-2.5 text-[13.5px] tracking-[-0.01em]">
-              <span className="text-haze">Health after</span>
-              {debtAfter > 0 ? (
-                <HealthBadge health={healthAfter} liqThresholdBps={liqThresholdBps} hasDebt />
-              ) : (
-                <span className="text-haze">–</span>
-              )}
-            </div>
-          </div>
-
-          {needsAcknowledgement ? (
-            <label className="flex cursor-pointer items-start gap-2.5 rounded-[3px] border border-amber/60 bg-carbon/40 p-3 text-[12.5px] leading-[1.5] tracking-[-0.01em] text-mist">
-              <input
-                type="checkbox"
-                checked={acceptedRisk}
-                onChange={event => setAcceptedRisk(event.target.checked)}
-                className="mt-0.5 h-4 w-4 accent-mint"
-              />
-              <span>
-                This draw leaves the position close to liquidation. A {(dropToLiquidation(asset.price, liqAfter) * 100).toFixed(1)}%
-                fall in {asset.symbol} would allow it to be liquidated. I understand the risk.
-              </span>
-            </label>
-          ) : null}
-
-          <PrimaryButton
-            disabled={draw <= 0 || overCapacity || (needsAcknowledgement && !acceptedRisk)}
-            aria-describedby={drawReason ? drawReasonId : undefined}
-            className="w-full"
-          >
-            {overCapacity ? "Above what this collateral supports" : <span className="inline-flex items-center gap-1.5">Draw <Usdg /></span>}
-          </PrimaryButton>
-          <Reason id={drawReasonId}>{drawReason}</Reason>
-
-          <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">
-            Demo mode: no pool contract configured yet.
-          </p>
-        </div>
-      </Panel>
-    </div>
-  )
-}
-
 export default function BorrowPage() {
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
         title="Borrow"
         lead="Lock a tokenized asset, draw USDG, pay one fee at the door. The debt you see at draw is the debt you repay."
-        badge={isLive && liveAssets.length > 0 ? "Live onchain" : "Demo data"}
+        badge={deploymentLabel}
       />
-      {isLive && liveAssets.length > 0 ? <LiveBorrow /> : <DemoBorrow />}
+      {hasDeployment && collateralAssets.length > 0 ? (
+        <LiveBorrow />
+      ) : (
+        <NotDeployed chainName={activeChain.name} />
+      )}
     </div>
   )
 }

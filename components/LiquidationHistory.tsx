@@ -1,8 +1,8 @@
 "use client"
 
 import { explorerTxUrl } from "@/lib/chain"
-import { usd } from "@/lib/demo"
-import { fromTokenUnits, fromUsdgUnits, liveAssets } from "@/lib/safix"
+import { usd } from "@/lib/format"
+import { fromTokenUnits, fromUsdgUnits, collateralAssets } from "@/lib/safix"
 import { useWalletHistory } from "@/lib/wallet-history"
 import { AssetMark, Panel } from "./ui"
 
@@ -10,7 +10,7 @@ import { AssetMark, Panel } from "./ui"
 const LIQUIDATED = ["Liquidated"] as const
 
 const symbolFor = (asset: string | null) =>
-  (asset && liveAssets.find(candidate => candidate.address.toLowerCase() === asset.toLowerCase())?.symbol) ||
+  (asset && collateralAssets.find(candidate => candidate.address.toLowerCase() === asset.toLowerCase())?.symbol) ||
   "Collateral"
 
 const when = (timestamp: number | null) =>

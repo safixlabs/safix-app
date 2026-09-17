@@ -100,14 +100,6 @@ export function reconcileFreshness(freshness: PriceFreshness, status: number | n
 }
 
 /**
- * The same line for a price whose age is already known, such as a demo price.
- * Anchored away from zero, because a posting time of zero or below means the
- * asset was never priced at all.
- */
-export const priceAgeLineForAge = (age: number, maxAge: number | null) =>
-  priceAgeLine(priceFreshness(1, maxAge, 1 + Math.max(0, age)))
-
-/**
  * The pool's own verdict on a price, in the order of `SafixPool.PriceStatus`.
  * Read from the chain rather than judged here, so the screen refuses exactly
  * what the contract refuses: the interface's clock never decides it.

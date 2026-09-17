@@ -1,5 +1,23 @@
 import { expect, test } from "@playwright/test"
 import type { Page } from "@playwright/test"
+import { givenCollateral, givenDebt, snapshotChain, revertChain, tbill } from "./chain"
+import { connect, installWallet } from "./wallet"
+
+/**
+ * A screen with something on it.
+ *
+ * These assertions are about controls a person reaches only once there is a
+ * position to act on, and this interface has no second source of numbers: the
+ * position is opened on the chain the suite runs against, then rolled back.
+ */
+const withPosition = async (page: Page, open: () => Promise<void>) => {
+  const snapshot = await snapshotChain()
+  await installWallet(page)
+  await open()
+  return async () => {
+    await revertChain(snapshot)
+  }
+}
 
 const screens = ["/", "/borrow/", "/pool/", "/partnerships/", "/passport/", "/assets/", "/risk/", "/terms/"]
 
@@ -72,10 +90,15 @@ test.describe("keyboard", () => {
   })
 
   test("a draw can be prepared with the keyboard alone", async ({ page }) => {
+    const rollback = await withPosition(page, () => givenCollateral(tbill))
     await page.goto("/borrow/")
+    await connect(page)
     const amount = page.getByLabel("Amount of USDG to draw")
     const max = page.getByRole("button", { name: /Use the maximum USDG to draw/ })
 
+    // The ceiling is read from the chain, so the control is disabled until the
+    // read lands. focus() and press() do not wait for that the way click() does.
+    await expect(max).toBeEnabled()
     await max.focus()
     await page.keyboard.press("Enter")
     await expect(amount).not.toHaveValue("")
@@ -86,6 +109,7 @@ test.describe("keyboard", () => {
     await page.keyboard.press("Space")
     await expect(acknowledgement).toBeChecked()
     await expect(page.getByRole("button", { name: /Draw/ })).toBeEnabled()
+    await rollback()
   })
 })
 
@@ -232,11 +256,14 @@ test.describe("target size", () => {
   }
 
   test("the liquidation acknowledgement is large enough to hit", async ({ page }) => {
+    const rollback = await withPosition(page, () => givenCollateral(tbill))
     await page.setViewportSize({ width: 360, height: 900 })
     await page.goto("/borrow/")
+    await connect(page)
     await page.getByRole("button", { name: "Use the maximum USDG to draw" }).click()
     await expect(page.getByRole("checkbox")).toBeVisible()
     expect(await undersizedTargets(page)).toEqual([])
+    await rollback()
   })
 
   test("the risk gate's controls are large enough to hit", async ({ page }) => {
@@ -312,9 +339,12 @@ test.describe("screen reader", () => {
   })
 
   test("the health bar reports its state, not just a colour", async ({ page }) => {
+    const rollback = await withPosition(page, () => givenDebt(tbill))
     await page.goto("/")
+    await connect(page)
     const bar = page.getByRole("progressbar").first()
     await expect(bar).toHaveAttribute("aria-valuetext", /percent, (Safe|Tight|At risk|Liquidatable)/)
+    await rollback()
   })
 })
 

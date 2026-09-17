@@ -4,14 +4,14 @@ import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { useAccount, usePublicClient } from "wagmi"
 import { reportError } from "@/lib/monitoring"
-import { AssetMark, HealthBadge, HealthBar, PageHeader, Panel, Stat, UsdgMark } from "@/components/ui"
+import { AssetMark, HealthBadge, HealthBar, NotDeployed, PageHeader, Panel, Stat, UsdgMark } from "@/components/ui"
 import { activeChain } from "@/lib/chain"
-import { demoPositions, demoPriceAge, maxLtvFor, passport, price, tokenAmount, usd } from "@/lib/demo"
+import { price, tokenAmount, usd } from "@/lib/format"
 import { reportReadFailure, reportReadSuccess } from "@/lib/health"
 import { useVisibleInterval } from "@/lib/polling"
-import { priceAgeLine, priceAgeLineForAge, priceFreshness } from "@/lib/price"
+import { priceAgeLine, priceFreshness } from "@/lib/price"
 import { distanceToLiquidation, healthStateOf, liquidationPrice1e18, priceToNumber } from "@/lib/risk"
-import { ONE_1E18, erc8056Abi, fromUsdgUnits, isLive, liveAssets, poolAddress, safixPoolAbi, uiTokenAmount } from "@/lib/safix"
+import { ONE_1E18, collateralAssets, deploymentLabel, erc8056Abi, fromUsdgUnits, hasDeployment, poolAddress, safixPoolAbi, uiTokenAmount } from "@/lib/safix"
 
 type PositionRow = {
   symbol: string
@@ -127,7 +127,7 @@ function LiveDashboard() {
       // wait, because they are asked per position size.
       const [positionReads, configReads, priceReads, guardReads, compounded, multipliers] = await Promise.all([
         Promise.all(
-          liveAssets.map(asset =>
+          collateralAssets.map(asset =>
             client.readContract({
               abi: safixPoolAbi,
               address: pool,
@@ -137,17 +137,17 @@ function LiveDashboard() {
           )
         ),
         Promise.all(
-          liveAssets.map(asset =>
+          collateralAssets.map(asset =>
             client.readContract({ abi: safixPoolAbi, address: pool, functionName: "assetConfig", args: [asset.address] })
           )
         ),
         Promise.all(
-          liveAssets.map(asset =>
+          collateralAssets.map(asset =>
             client.readContract({ abi: safixPoolAbi, address: pool, functionName: "currentPrice", args: [asset.address] })
           )
         ),
         Promise.all(
-          liveAssets.map(asset =>
+          collateralAssets.map(asset =>
             client
               .readContract({ abi: safixPoolAbi, address: pool, functionName: "priceGuards", args: [asset.address] })
               // A pool with no guard for this asset is not a broken read: the age is
@@ -162,7 +162,7 @@ function LiveDashboard() {
           args: [address]
         }),
         Promise.all(
-          liveAssets.map(asset =>
+          collateralAssets.map(asset =>
             client
               .readContract({ abi: erc8056Abi, address: asset.address, functionName: "uiMultiplier" })
               .catch(() => ONE_1E18)
@@ -170,7 +170,7 @@ function LiveDashboard() {
         )
       ])
       const valueReads = await Promise.all(
-        liveAssets.map((asset, index) =>
+        collateralAssets.map((asset, index) =>
           client.readContract({
             abi: safixPoolAbi,
             address: pool,
@@ -182,7 +182,7 @@ function LiveDashboard() {
       if (cancelled) return
       const at = Math.floor(Date.now() / 1000)
       setRows(
-        liveAssets
+        collateralAssets
           .map((asset, index) => {
             const collateral = positionReads[index][0]
             const debt = positionReads[index][1]
@@ -263,62 +263,15 @@ function LiveDashboard() {
   )
 }
 
-function DemoDashboard() {
-  const collateralValue = demoPositions.reduce((sum, position) => sum + position.value, 0)
-  const totalDebt = demoPositions.reduce((sum, position) => sum + position.debt, 0)
-  const capacity = demoPositions.reduce(
-    (sum, position) => sum + position.value * maxLtvFor(position.symbol),
-    0
-  )
-  const availableCredit = Math.max(0, capacity - totalDebt)
-
-  const rows: PositionRow[] = demoPositions.map(position => {
-    const liqThresholdBps = Math.round((maxLtvFor(position.symbol) + 0.1) * 10_000)
-    const unitPrice = position.locked > 0 ? position.value / position.locked : 0
-    const liquidationPrice =
-      position.locked > 0 ? (position.debt * 10_000) / (position.locked * liqThresholdBps) : 0
-    const age = demoPriceAge(position.symbol)
-    return {
-      symbol: position.symbol,
-      locked: position.locked,
-      value: position.value,
-      debt: position.debt,
-      price: unitPrice,
-      liquidationPrice,
-      liqThresholdBps,
-      priceLine: age ? priceAgeLineForAge(age.pricedSecondsAgo, age.maxPriceAge) : ""
-    }
-  })
-
-  return (
-    <>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Collateral value" value={usd(collateralValue)} hint="2 assets locked" />
-        <Stat label="Active debt" value={usd(totalDebt)} hint="Fixed since draw, no accrual" />
-        <Stat label="Available credit" value={usd(availableCredit)} hint="Against current collateral" />
-        <Stat label="Credit passport" value="Active" hint={`${passport.attestations} attestations in force`} />
-      </div>
-
-      <Panel title="Positions">
-        <ul className="flex flex-col divide-y divide-line">
-          {rows.map(row => (
-            <PositionLine key={row.symbol} row={row} />
-          ))}
-        </ul>
-      </Panel>
-    </>
-  )
-}
-
 export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
         title="Overview"
         lead="Your collateral, your credit, and your passport in one place. Debt never grows with time here: what you drew is what you owe."
-        badge={isLive ? "Live onchain" : "Demo data"}
+        badge={deploymentLabel}
       />
-      {isLive ? <LiveDashboard /> : <DemoDashboard />}
+      {hasDeployment ? <LiveDashboard /> : <NotDeployed chainName={activeChain.name} />}
       <p className="text-[13px] leading-[1.6] tracking-[-0.02em] text-haze">
         Credit here is interest-free by design: a one-time fee at origination, a fixed fee at
         redemption, nothing in between. The full model is described in the{" "}

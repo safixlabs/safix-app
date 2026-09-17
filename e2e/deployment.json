@@ -1,22 +1,6 @@
 {
-  "comment": "The deployment the money-path suite runs against: the one safixlabs/safix records in deployments/testnet.json. anvil forks this chain, so the contracts under test are the ones really deployed on it. Override any of these with the matching NEXT_PUBLIC_ variable, or E2E_FORK_URL, to point the suite at a different deployment.",
-  "source": {
-    "repository": "safixlabs/safix",
-    "record": "deployments/testnet.json",
-    "recordCommit": "ec913ceeef567acf166398ac82316f5eadf2e138",
-    "builtFrom": "c1ed0965a2f5e87d6e68ad05e3ac256196a303c0"
-  },
+  "comment": "How the money-path suite reaches a chain. The addresses are not here: they come from data/deployments.json, the same record the app itself reads, so the suite can never be pointed at a deployment the interface does not use. anvil forks the chain named here, so the contracts under test are the ones really deployed on it. Override any address with its NEXT_PUBLIC_ variable, or the chain with E2E_FORK_URL.",
   "forkUrl": "https://rpc.testnet.chain.robinhood.com",
   "chainId": 31337,
-  "port": 8545,
-  "deployBlock": 114962671,
-  "addresses": {
-    "pool": "0xc7dc6ca56dddf387cf5fd6dfdf4e728a7878df38",
-    "usdg": "0xa8807fa75b33b2a452de17fa08287659d1f5b559",
-    "registry": "0xb9b15e826bf0266a8dc02d8498cdc520a52d1030",
-    "desk": "0x8d722ec4d48a0051b2a996e09ebf95a9dc4e5375",
-    "tbill": "0xe848360b1baeb68b080c7b2731095ba1c21d0ada",
-    "bnvda": "0x06bcd9b23093480fc978f8da3168c64902f52d3e",
-    "tgold": "0xa5e5e369c07283fc086fb0bddee9cd8b8bbe44d0"
-  }
+  "port": 8545
 }

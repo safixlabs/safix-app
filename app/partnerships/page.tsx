@@ -2,15 +2,15 @@
 
 import { useEffect, useId, useRef, useState } from "react"
 import { useAccount, usePublicClient, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
-import { AmountField, ConfirmedLink, IN_PROGRESS, PageHeader, Panel, PrimaryButton, Reason } from "@/components/ui"
+import { AmountField, ConfirmedLink, IN_PROGRESS, NotDeployed, PageHeader, Panel, PrimaryButton, Reason } from "@/components/ui"
 import { activeChain } from "@/lib/chain"
-import { usd } from "@/lib/demo"
+import { usd } from "@/lib/format"
 import { reportReadFailure, reportReadSuccess } from "@/lib/health"
 import { useVisibleInterval } from "@/lib/polling"
 import { TxToast } from "@/components/TxToast"
 import { humanError } from "@/lib/errors"
 import { reportError } from "@/lib/monitoring"
-import { deskAbi, deskAddress, erc20Abi, fromUsdgUnits, usdgAddress, usdgUnits } from "@/lib/safix"
+import { deploymentLabel, deskAbi, deskAddress, erc20Abi, fromUsdgUnits, usdgAddress, usdgUnits } from "@/lib/safix"
 import { useRecordSubmission } from "@/lib/submitted"
 
 /** In the order of the desk's `Status` enum, so the number read off the chain indexes it directly. */
@@ -307,85 +307,15 @@ function LivePartnerships() {
   )
 }
 
-function DemoPartnerships() {
-  const demo = [
-    {
-      id: 0,
-      operator: "0x7c41…e09b",
-      share: 40,
-      status: 1,
-      goal: 100000,
-      funded: 100000,
-      returned: 36500,
-      note: "Working capital for a tokenized invoice book. Profit split 60/40 in favor of capital."
-    },
-    {
-      id: 1,
-      operator: "0x2fa8…11cd",
-      share: 35,
-      status: 0,
-      goal: 250000,
-      funded: 84000,
-      returned: 0,
-      note: "Inventory financing against tokenized gold. Funding open."
-    }
-  ]
-
-  return (
-    <div className="flex flex-col gap-4">
-      {demo.map(row => (
-        <Panel key={row.id} title={`Partnership #${row.id}`}>
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <StatusPill status={row.status} />
-                <span className="text-[13px] tracking-[-0.01em] text-haze">
-                  Operator {row.operator} · keeps {row.share}% of profit
-                </span>
-              </div>
-              <span className="text-[13px] tracking-[-0.01em] text-haze">Returned {usd(row.returned)}</span>
-            </div>
-            <div>
-              <div className="flex items-baseline justify-between text-[13px] tracking-[-0.01em]">
-                <span className="text-haze">Funded</span>
-                <span className="text-mist">
-                  {usd(row.funded)} / {usd(row.goal)}
-                </span>
-              </div>
-              <div
-                role="progressbar"
-                aria-label={`Funding progress for partnership ${row.id}`}
-                aria-valuenow={Math.round(Math.min(100, (row.funded / row.goal) * 100))}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                className="mt-2 h-1.5 w-full overflow-hidden rounded-none bg-line"
-              >
-                <div
-                  className="h-full rounded-none bg-mint"
-                  style={{ width: `${Math.min(100, (row.funded / row.goal) * 100)}%` }}
-                />
-              </div>
-            </div>
-            <p className="text-[13.5px] leading-[1.6] tracking-[-0.01em] text-mist">{row.note}</p>
-          </div>
-        </Panel>
-      ))}
-      <p className="text-center text-[12.5px] tracking-[-0.02em] text-haze">
-        Demo mode: no partnership desk contract configured yet.
-      </p>
-    </div>
-  )
-}
-
 export default function PartnershipsPage() {
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
         title="Partnerships"
         lead="For financing tied to a business, the pool acts as a partner instead of a creditor. Profit splits at a pre-agreed ratio; genuine losses fall on the capital."
-        badge={deskAddress ? "Live onchain" : "Demo data"}
+        badge={deploymentLabel}
       />
-      {deskAddress ? <LivePartnerships /> : <DemoPartnerships />}
+      {deskAddress ? <LivePartnerships /> : <NotDeployed chainName={activeChain.name} />}
     </div>
   )
 }

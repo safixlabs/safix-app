@@ -4,7 +4,6 @@ import {
   agoWords,
   durationWords,
   priceAgeLine,
-  priceAgeLineForAge,
   priceFreshness,
   priceVerdict,
   reconcileFreshness
@@ -89,15 +88,6 @@ test.describe("price age", () => {
       expect(verdict.label, `PriceStatus ${status}`).toBeTruthy()
       expect(verdict.note, `PriceStatus ${status}`).toBeTruthy()
     }
-  })
-
-  // A known age, as the demo prices carry, reads as that age: never as a price
-  // that was not posted, which is what a posting time at or below zero means.
-  test("a price given only by its age reads as that age", () => {
-    expect(priceAgeLineForAge(9 * 60, DAY)).toBe("priced 9 minutes ago")
-    expect(priceAgeLineForAge(0, HOUR)).toBe("priced moments ago")
-    expect(priceAgeLineForAge(50 * 60, HOUR)).toBe("priced 50 minutes ago, close to the hour this asset allows")
-    expect(priceAgeLineForAge(2 * HOUR, HOUR)).toBe("priced 2 hours ago, past the hour this asset allows")
   })
 
   // The age is this browser's reading; the refusal is the pool's. Where the two

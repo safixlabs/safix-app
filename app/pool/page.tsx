@@ -10,6 +10,7 @@ import {
   GhostButton,
   IN_PROGRESS,
   Meter,
+  NotDeployed,
   PageHeader,
   Panel,
   PrimaryButton,
@@ -23,7 +24,7 @@ import {
 } from "@/components/ui"
 import { track, type AnalyticsEvent } from "@/lib/analytics"
 import { activeChain } from "@/lib/chain"
-import { tokenAmount, usd } from "@/lib/demo"
+import { tokenAmount, usd } from "@/lib/format"
 import { TxToast } from "@/components/TxToast"
 import { humanError } from "@/lib/errors"
 import { useRecordSubmission } from "@/lib/submitted"
@@ -31,8 +32,9 @@ import {
   erc20Abi,
   fromTokenUnits,
   fromUsdgUnits,
-  isLive,
-  liveAssets,
+  hasDeployment,
+  deploymentLabel,
+  collateralAssets,
   poolAddress,
   safixPoolAbi,
   usdgAddress,
@@ -294,14 +296,14 @@ function LivePool() {
     query: { enabled: Boolean(address) }
   })
   const gains = useReadContracts({
-    contracts: liveAssets.map(asset => ({
+    contracts: collateralAssets.map(asset => ({
       chainId: activeChain.id,
       abi: safixPoolAbi,
       address: poolAddress,
       functionName: "gainOf" as const,
       args: address ? [address, asset.address] : undefined
     })),
-    query: { enabled: Boolean(address) && liveAssets.length > 0 }
+    query: { enabled: Boolean(address) && collateralAssets.length > 0 }
   })
 
   const { writeContract, data: txHash, isPending, error: writeError, variables } = useWriteContract()
@@ -332,7 +334,7 @@ function LivePool() {
   const walletBalance = fromUsdgUnits((personal.data?.[1]?.result as bigint | undefined) ?? 0n)
   const allowance = (personal.data?.[2]?.result as bigint | undefined) ?? 0n
 
-  const gainRows: GainRow[] = liveAssets.map((asset, index) => ({
+  const gainRows: GainRow[] = collateralAssets.map((asset, index) => ({
     symbol: asset.symbol,
     amount: fromTokenUnits((gains.data?.[index]?.result as bigint | undefined) ?? 0n)
   }))
@@ -360,13 +362,13 @@ function LivePool() {
   }
 
   const claim = () => {
-    if (!poolAddress || liveAssets.length === 0) return
+    if (!poolAddress || collateralAssets.length === 0) return
     writeContract({
       chainId: activeChain.id,
       abi: safixPoolAbi,
       address: poolAddress,
       functionName: "claimGains",
-      args: [liveAssets.map(asset => asset.address)]
+      args: [collateralAssets.map(asset => asset.address)]
     })
   }
 
@@ -466,72 +468,15 @@ function LivePool() {
   )
 }
 
-function DemoPool() {
-  const [mode, setMode] = useState<Mode>("deposit")
-  const [amount, setAmount] = useState("")
-  const [submitted, setSubmitted] = useState(false)
-
-  const poolSize = 2_412_000
-  const available = 903_400
-  const yourDeposit = 5_000
-  const walletBalance = 12_400
-  const gainRows: GainRow[] = [
-    { symbol: "tBILL", amount: 1.482 },
-    { symbol: "bNVDA", amount: 0.3125 },
-    { symbol: "tGOLD", amount: 0.0164 }
-  ]
-
-  return (
-    <>
-      <PoolStats poolSize={poolSize} available={available} yourDeposit={yourDeposit} connected />
-      <div className="grid items-start gap-4 lg:grid-cols-[1.05fr_1fr] [&>*]:min-w-0">
-        <LiquidityCard
-          mode={mode}
-          setMode={next => {
-            setMode(next)
-            setSubmitted(false)
-          }}
-          amount={amount}
-          setAmount={next => {
-            setAmount(next)
-            setSubmitted(false)
-          }}
-          walletBalance={walletBalance}
-          yourDeposit={yourDeposit}
-          poolSize={poolSize}
-          reason={Number.parseFloat(amount) > 0 ? null : `Enter an amount to ${mode}.`}
-          quickReason={null}
-          onSubmit={() => setSubmitted(true)}
-          actionLabel={mode === "deposit" ? "Deposit" : "Withdraw"}
-          note={
-            submitted
-              ? "Demo action recorded. Set the contract addresses to go live."
-              : "Demo mode: no pool contract configured yet."
-          }
-        />
-        <div className="flex flex-col gap-4">
-          <GainsCard
-            rows={gainRows}
-            onClaim={() => setSubmitted(true)}
-            reason={null}
-            note="Demo balances from three liquidations."
-          />
-          <EarnCard />
-        </div>
-      </div>
-    </>
-  )
-}
-
 export default function PoolPage() {
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
         title="Stability pool"
         lead="The pool funds every draw and absorbs every liquidation. Providers earn from real events, liquidation gains and protocol rewards, never from time."
-        badge={isLive ? "Live onchain" : "Demo data"}
+        badge={deploymentLabel}
       />
-      {isLive ? <LivePool /> : <DemoPool />}
+      {hasDeployment ? <LivePool /> : <NotDeployed chainName={activeChain.name} />}
     </div>
   )
 }

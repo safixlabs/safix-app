@@ -149,7 +149,7 @@ export function SummaryRow({ label, value }: { label: ReactNode; value: ReactNod
   return (
     <div className="flex items-baseline justify-between gap-4 py-2.5 text-[13.5px] tracking-[-0.01em]">
       <span className="text-haze">{label}</span>
-      <span className="text-right text-mist">{value}</span>
+      <span data-figure className="text-right text-mist">{value}</span>
     </div>
   )
 }
@@ -186,12 +186,32 @@ export function AmountField(props: InputHTMLAttributes<HTMLInputElement>) {
   )
 }
 
-export function DemoTag({ label = "Demo data" }: { label?: string }) {
+export function Badge({ label }: { label: string }) {
   return (
     <span className="inline-flex items-center gap-2 rounded-[3px] border border-line bg-panel/80 px-3.5 py-1.5 text-[12px] tracking-[-0.02em] text-haze">
       <span className="h-1.5 w-1.5 rounded-[3px] bg-mint" />
       {label}
     </span>
+  )
+}
+
+/**
+ * What a screen shows on a chain Safix is not deployed to.
+ *
+ * Every figure in this interface is read from a deployment. Where there is none
+ * there is nothing to read, and the screen says that rather than filling itself
+ * with numbers nobody can act on.
+ */
+export function NotDeployed({ chainName }: { chainName: string }) {
+  return (
+    <section className="flex flex-col gap-3 rounded-[4px] border border-line bg-panel p-6">
+      <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-fog">Nothing is deployed on {chainName}</h2>
+      <p className="max-w-[62ch] text-[13.5px] leading-[1.6] tracking-[-0.02em] text-mist">
+        This screen reads its numbers from the Safix contracts, and there are none on this chain yet. Rather
+        than show figures that stand for nothing, it shows this. Switch to a chain with a deployment, or point
+        this build at one with the <span className="text-fog">NEXT_PUBLIC_POOL_ADDRESS</span> variables.
+      </p>
+    </section>
   )
 }
 
@@ -202,7 +222,7 @@ export function PageHeader({ title, lead, badge }: { title: string; lead: string
         <h1 className="text-[26px] font-bold leading-[1.1] tracking-[-0.02em] text-fog sm:text-[30px] md:text-[36px]">
           {title}
         </h1>
-        <DemoTag label={badge} />
+        {badge ? <Badge label={badge} /> : null}
       </div>
       <p className="max-w-[560px] text-[14px] leading-[1.6] tracking-[-0.02em] text-mist md:text-[15px]">
         {lead}
@@ -215,7 +235,7 @@ export function Stat({ label, value, hint }: { label: ReactNode; value: string; 
   return (
     <div className="rounded-[4px] border border-line bg-panel/80 p-5">
       <p className="flex items-center gap-1.5 text-[12.5px] tracking-[-0.02em] text-haze">{label}</p>
-      <p className="mt-2 text-[24px] font-bold leading-none tracking-[-0.01em] text-fog md:text-[27px]">
+      <p data-figure className="mt-2 text-[24px] font-bold leading-none tracking-[-0.01em] text-fog md:text-[27px]">
         {value}
       </p>
       {hint ? <p className="mt-2.5 text-[12px] leading-snug tracking-[-0.02em] text-haze">{hint}</p> : null}

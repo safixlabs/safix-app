@@ -1,0 +1,45 @@
+{
+  "comment": "The deployments this interface reads. Every address here was deployed by safixlabs/safix and is recorded in that repository's deployments/<network>.json; nothing on any screen is invented. A NEXT_PUBLIC_ variable overrides the matching entry, which is how the money-path suite points the app at a fork.",
+  "testnet": {
+    "chain": "testnet",
+    "chainId": 46630,
+    "source": {
+      "repository": "safixlabs/safix",
+      "record": "deployments/testnet.json",
+      "commit": "450b71deb69c2afd7ffce6af9076c941e22ee6e6",
+      "tag": "testnet-2026-09-16"
+    },
+    "deployBlock": 120348593,
+    "deployedAt": "2026-09-16T11:22:33.768Z",
+    "settlement": "tUSDG",
+    "note": "The testnet carries no USDG and none of the chain's tokenized equities, so this deployment settles in its own tUSDG and lends against tBILL, bNVDA and tGOLD, which safixlabs/safix deploys with it. They are the deployment's own assets, not stand-ins drawn on a screen: every figure quoted against them is read from these contracts.",
+    "addresses": {
+      "pool": "0x83feb836aab98eec343690209db227f1b085c283",
+      "usdg": "0x9e037ef20e020a7f3586c9925661e030d97cd2a3",
+      "registry": "0xca730a1aa0441177f2d68ca1eb24724f204ae76a",
+      "desk": "0xd42ddd47de8d2b6a80b095f4ce5cfcfa398b76de",
+      "timelock": "0x08b3754336223acb60e3d2cd83bdcb5a73ee7b5b"
+    },
+    "assets": [
+      {
+        "symbol": "tBILL",
+        "name": "Tokenized treasury 3M",
+        "kind": "Government debt",
+        "address": "0xb89a04c644f6e844ba81eddc0de2a803fa737df0"
+      },
+      {
+        "symbol": "bNVDA",
+        "name": "Tokenized Nvidia",
+        "kind": "Tokenized stock",
+        "address": "0x11e7003a43182104672e39a2d4787549119cf62d"
+      },
+      {
+        "symbol": "tGOLD",
+        "name": "Tokenized gold",
+        "kind": "Commodity",
+        "address": "0x361edbf3901366ac3e74b2ff2a0eafbdd6899479"
+      }
+    ]
+  },
+  "mainnet": null
+}
