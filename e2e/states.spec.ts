@@ -208,7 +208,7 @@ test.describe("states", () => {
       // The ceiling names the pool rather than the collateral, which is the whole
       // point of the state. The control carries no description here because it is
       // not blocked: a residue below any position the pool would accept is still
-      // offered as a maximum. See safixlabs/safix-app#38.
+      // offered as a maximum. See safixlabs/safix-app#44.
       const sentence = "The pool is the tighter of the two right now, so that is the ceiling."
       await expect(page.getByText(sentence)).toBeVisible({ timeout: 30_000 })
     } finally {
