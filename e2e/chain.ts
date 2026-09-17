@@ -167,6 +167,28 @@ export const partnership = (id: bigint) =>
   publicClient.readContract({ abi: deskAbi, address: desk, functionName: "partnerships", args: [id] })
 
 /**
+ * A transaction that reverted for a reason the chain would not give, which is
+ * what a fork looks like when the node behind it no longer serves the state of
+ * the block it was forked at. `waitFor` replays the call a block earlier and
+ * reports "no reason given" when that replay succeeds, so this is the one shape
+ * worth trying again: the call was sound, the node was not. Anything the chain
+ * explains is a real failure and goes straight up. See safixlabs/safix-app#45.
+ */
+const nodeWouldNotSay = (error: unknown) =>
+  error instanceof Error && error.message.includes("reverted: no reason given")
+
+async function despiteTheNode<T>(what: () => Promise<T>, attempts = 3): Promise<T> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await what()
+    } catch (error) {
+      if (attempt >= attempts || !nodeWouldNotSay(error)) throw error
+      await new Promise(resolve => setTimeout(resolve, 500 * attempt))
+    }
+  }
+}
+
+/**
  * Re-posts each asset's own price, as a keeper would. A fork starts from the
  * chain as it stands, where a manually priced asset can be older than its guard
  * allows, and the pool will not draw or liquidate against a stale price.
@@ -176,7 +198,9 @@ export async function refreshPrices(assets: Address[]) {
   const asOwner = await asAccount(owner)
   for (const asset of assets) {
     const [, , , price] = await publicClient.readContract({ abi: poolAbi, address: pool, functionName: "assetConfig", args: [asset] })
-    await waitFor(await asOwner.writeContract({ abi: poolAbi, address: pool, functionName: "setPrice", args: [asset, price] }))
+    await despiteTheNode(async () =>
+      waitFor(await asOwner.writeContract({ abi: poolAbi, address: pool, functionName: "setPrice", args: [asset, price] }))
+    )
   }
   await stopImpersonating(owner)
 }
