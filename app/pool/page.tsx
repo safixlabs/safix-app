@@ -74,7 +74,7 @@ function PoolStats({
       />
       <div className="rounded-[4px] border border-line bg-panel/80 p-5">
         <p className="text-[12.5px] tracking-[-0.02em] text-haze">Deployed to loans</p>
-        <p className="mt-2 text-[24px] font-bold leading-none tracking-[-0.01em] text-fog md:text-[27px]">
+        <p data-figure className="mt-2 text-[24px] font-bold leading-none tracking-[-0.01em] text-fog md:text-[27px]">
           {usd(deployed)}
         </p>
         <div className="mt-4">

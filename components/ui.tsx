@@ -77,7 +77,7 @@ export function Meter({ value, label, name }: { value: number; label?: string; n
       >
         <div className="h-full bg-mint transition-[width] duration-500" style={{ width: `${width}%` }} />
       </div>
-      {label ? <p className="text-[12px] tracking-[-0.02em] text-haze">{label}</p> : null}
+      {label ? <p data-figure className="text-[12px] tracking-[-0.02em] text-haze">{label}</p> : null}
     </div>
   )
 }
