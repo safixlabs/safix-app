@@ -90,13 +90,13 @@ const metadata = appUrl
       name: "Safix",
       description: "Borrow USDG against tokenized assets at zero interest.",
       url: appUrl,
-      icons: [`${appUrl}/logo.png`]
+      icons: [`${appUrl}/icons/icon-256.png`]
     }
   : undefined
 
 const connectors = [
   injected({ shimDisconnect: true }),
-  coinbaseWallet({ appName: "Safix", appLogoUrl: appUrl ? `${appUrl}/logo.png` : undefined }),
+  coinbaseWallet({ appName: "Safix", appLogoUrl: appUrl ? `${appUrl}/icons/icon-256.png` : undefined }),
   ...(walletConnectProjectId
     ? [
         walletConnect({

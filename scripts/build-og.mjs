@@ -46,7 +46,7 @@ const fonts = [
   { name: "DM Sans", data: read("assets/fonts/DMSans-Bold.ttf"), weight: 700, style: "normal" }
 ]
 
-const mark = `data:image/png;base64,${read("app/icon.png").toString("base64")}`
+const mark = `data:image/png;base64,${read("assets/brand/mark.png").toString("base64")}`
 
 const surfaces = JSON.parse(readFileSync(join(root, "site.config.json"), "utf8"))
 const here = surfaces.surfaces.app

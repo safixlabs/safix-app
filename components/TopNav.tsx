@@ -110,7 +110,10 @@ export default function TopNav() {
       <div className="mx-auto flex w-full max-w-[1120px] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-6 py-3 md:py-4">
         <div className="order-1 flex shrink-0 items-center gap-3">
           <Link href="/" className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="" className="h-7 w-7" />
+<span
+              aria-hidden
+              className="h-7 w-7 shrink-0 bg-fog [mask-image:url(/logo.png)] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain]"
+            />
             <span className="text-[19px] font-bold tracking-[-0.01em] text-fog">Safix</span>
           </Link>
           <span className="hidden whitespace-nowrap text-[11px] tracking-[-0.02em] text-haze lg:block">{activeChain.name}</span>
