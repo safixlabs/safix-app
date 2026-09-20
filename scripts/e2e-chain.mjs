@@ -90,6 +90,24 @@ await waitForChain()
 log("fork is up")
 await assertContracts()
 
+/**
+ * Gas for the test accounts, set on the fork rather than drawn from a faucet.
+ *
+ * These are anvil's published accounts, and on a fork they start with whatever
+ * the live chain happens to hold for them. That balance drains over time and
+ * takes the suite down with it, which is a faucet failing rather than anything
+ * the app did. The fork is local, so the balance is simply set.
+ */
+const fundAccounts = async () => {
+  const accounts = Object.values(config.accounts ?? {}).map(account => account.address ?? account)
+  for (const address of accounts) {
+    await rpc("anvil_setBalance", [address, "0x56bc75e2d63100000"])
+  }
+  log(`funded ${accounts.length} test account(s) with 100 ETH each`)
+}
+
+await fundAccounts()
+
 const args = process.argv.slice(2)
 // Every screen in this app reads a chain: there is no second source of numbers,
 // so every suite that renders one runs here. Only the two that test pure

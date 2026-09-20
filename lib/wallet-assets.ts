@@ -40,12 +40,24 @@ export function markOffered(token: Address) {
  * The logo the wallet is handed, as an absolute URL. Wallets fetch it
  * themselves, so a path relative to this origin means nothing to them.
  */
+/**
+ * The raster a wallet is handed in place of a vector.
+ *
+ * `wallet_watchAsset` image support for SVG is uneven across wallets, and a
+ * token that arrives with no image at all is the failure this avoids. The
+ * interface keeps the vector, which stays crisp at every size it is drawn.
+ */
+const rasterFor: Record<string, string> = {
+  "/usdg.svg": "/usdg.png"
+}
+
 const imageFor = (symbol: string) => {
   if (typeof window === "undefined") return undefined
   // An asset whose logo the circle cannot carry has none to hand over either. A
   // wallet showing no image is better than one showing an unreadable card.
-  const src = assetIconSrc(symbol)
-  if (!src) return undefined
+  const icon = assetIconSrc(symbol)
+  if (!icon) return undefined
+  const src = rasterFor[icon] ?? icon
   try {
     return new URL(src, window.location.origin).href
   } catch {

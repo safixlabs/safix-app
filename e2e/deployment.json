@@ -2,5 +2,15 @@
   "comment": "How the money-path suite reaches a chain. The addresses are not here: they come from data/deployments.json, the same record the app itself reads, so the suite can never be pointed at a deployment the interface does not use. anvil forks the chain named here, so the contracts under test are the ones really deployed on it. Override any address with its NEXT_PUBLIC_ variable, or the chain with E2E_FORK_URL.",
   "forkUrl": "https://rpc.testnet.chain.robinhood.com",
   "chainId": 31337,
-  "port": 8545
+  "port": 8545,
+  "accounts": {
+    "borrower": {
+      "address": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "key": "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+    },
+    "second": {
+      "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "key": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+    }
+  }
 }

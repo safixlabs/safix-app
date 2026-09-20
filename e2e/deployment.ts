@@ -46,16 +46,10 @@ export const deployment = {
  * anvil's first two accounts. The keys are the ones anvil prints on every
  * start; they are public knowledge and hold nothing outside a local chain.
  */
-export const accounts = {
-  borrower: {
-    address: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
-    key: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
-  },
-  second: {
-    address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    key: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-  }
-} as const
+export const accounts = config.accounts as {
+  borrower: { address: `0x${string}`; key: `0x${string}` }
+  second: { address: `0x${string}`; key: `0x${string}` }
+}
 
 /** The environment the app under test needs to talk to the fork. */
 export const appEnv = {
