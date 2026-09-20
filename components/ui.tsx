@@ -3,7 +3,7 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react"
 import { useState } from "react"
 import RobinhoodText from "./RobinhoodText"
-import { assetIconSrc, assetInitials } from "@/lib/assets"
+import { assetIconSrc, assetInitials, assetMarkSrc } from "@/lib/assets"
 import { explorerTxUrl } from "@/lib/chain"
 import { healthStateCopy, healthStateOf, liquidationHealth } from "@/lib/risk"
 
@@ -35,7 +35,7 @@ export function AssetMark({
   label?: string
 }) {
   const [failed, setFailed] = useState(false)
-  const src = assetIconSrc(symbol)
+  const src = assetMarkSrc(symbol)
   if (failed || !src) {
     return (
       <span

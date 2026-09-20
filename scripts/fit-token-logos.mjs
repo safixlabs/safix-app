@@ -108,18 +108,21 @@ for (const file of readdirSync(logos).filter(name => name.endsWith(".png"))) {
   fitted += 1
 }
 
-// A logo the circle cannot carry is dropped from the registry rather than left
-// pointing at an image nobody can read. The interface falls back to the ticker.
+// A logo the circle cannot carry is marked rather than deleted. The mark in the
+// interface falls back to the ticker, and a wallet, which draws the token in a
+// layout of its own, still gets an image instead of nothing.
 let dropped = 0
 for (const token of registry.tokens) {
   const own = `/tokens/${token.symbol.toLowerCase()}.png`
   if (unreadable.has(own)) {
-    token.icon = null
+    token.icon = own
+    token.wideMark = true
     dropped += 1
   } else if (readable.has(own)) {
     token.icon = own
+    delete token.wideMark
   }
 }
 writeFileSync(registryPath, `${JSON.stringify(registry, null, 2)}\n`)
 
-console.log(`fit-token-logos: ${fitted} fitted, ${dropped} too wide for a circle and now shown as tickers`)
+console.log(`fit-token-logos: ${fitted} fitted, ${dropped} too wide for a circle, shown as tickers there and as logos in a wallet`)

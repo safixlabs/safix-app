@@ -29,15 +29,32 @@ const standsFor: Record<string, string> = {
 
 export const assetTicker = (symbol: string) => standsFor[symbol] ?? underlyingTicker(symbol)
 
+const registryEntry = (symbol: string) => tokenBySymbol(symbol) ?? tokenBySymbol(assetTicker(symbol))
+
+/**
+ * The logo itself, whatever shape it is.
+ *
+ * A wallet draws a token in a layout of its own, so a wordmark that cannot sit in
+ * a circle is still worth handing over: an image nobody chose beats no image.
+ */
 export const assetIconSrc = (symbol: string): string | null => {
   const own = shipped[symbol]
   if (own) return own
-  const exact = tokenBySymbol(symbol)
-  if (exact?.icon) return exact.icon
-  const ticker = assetTicker(symbol)
-  const underlying = tokenBySymbol(ticker)
-  if (underlying) return underlying.icon
-  return `https://financialmodelingprep.com/image-stock/${ticker}.png`
+  const entry = registryEntry(symbol)
+  if (entry) return entry.icon
+  return `https://financialmodelingprep.com/image-stock/${assetTicker(symbol)}.png`
+}
+
+/**
+ * The logo where the interface draws it in a circle, which most wordmarks cannot
+ * survive. `AssetMark` shows the ticker instead when this is null.
+ */
+export const assetMarkSrc = (symbol: string): string | null => {
+  const own = shipped[symbol]
+  if (own) return own
+  const entry = registryEntry(symbol)
+  if (entry) return entry.wideMark ? null : entry.icon
+  return `https://financialmodelingprep.com/image-stock/${assetTicker(symbol)}.png`
 }
 
 /**

@@ -9,6 +9,8 @@ export type ChainToken = {
   /** Carries ERC-8056 `uiMultiplier`, which on this chain means a tokenized equity. */
   scaled: boolean
   icon: string | null
+  /** Its logo is a wordmark, legible in a wallet's own layout but not in a circle. */
+  wideMark?: boolean
 }
 
 type Registry = {

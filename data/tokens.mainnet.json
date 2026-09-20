@@ -29,7 +29,8 @@
       "name": "AMC Entertainment • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/amc.png",
+      "wideMark": true
     },
     {
       "address": "0x86923f96303d656e4aa86d9d42d1e57ad2023fdc",
@@ -61,7 +62,8 @@
       "name": "AST SpaceMobile • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/asts.png",
+      "wideMark": true
     },
     {
       "address": "0x156e175dd063a8ce274c50654ef40e0032b3fbcf",
@@ -125,7 +127,8 @@
       "name": "Costco • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/cost.png",
+      "wideMark": true
     },
     {
       "address": "0xdf0992e440dd0be65bd8439b609d6d4366bf1cb5",
@@ -157,7 +160,8 @@
       "name": "Cisco Systems • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/csco.png",
+      "wideMark": true
     },
     {
       "address": "0x63d5a3b6939a33f1e75d8bcd85759858239600db",
@@ -189,7 +193,8 @@
       "name": "Dell • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/dell.png",
+      "wideMark": true
     },
     {
       "address": "0x1d11f0496982706c5e14a514d4e79f2e6bde4516",
@@ -221,7 +226,8 @@
       "name": "Ford Motor • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/f.png",
+      "wideMark": true
     },
     {
       "address": "0x41f4267525a8aff329540ef24fd83d9044758b33",
@@ -237,7 +243,8 @@
       "name": "Fluence Energy • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/flnc.png",
+      "wideMark": true
     },
     {
       "address": "0x03bc731ffb162cdd7b98d3c6542bfc291126075d",
@@ -245,7 +252,8 @@
       "name": "Firefly Aerospace Inc. • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/fly.png",
+      "wideMark": true
     },
     {
       "address": "0x63b814ddbd6bf339f25fed8c36158a008d5b373e",
@@ -261,7 +269,8 @@
       "name": "SPDR Gold Trust • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/gld.png",
+      "wideMark": true
     },
     {
       "address": "0x7c04e6a3368f2a1de3874f0e80d2e0a1a9915da6",
@@ -269,7 +278,8 @@
       "name": "Corning • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/glw.png",
+      "wideMark": true
     },
     {
       "address": "0x2d427692e928fa156ec22acfabafa0447c5805b7",
@@ -309,7 +319,8 @@
       "name": "Hims & Hers Health • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/hims.png",
+      "wideMark": true
     },
     {
       "address": "0x59dd09d4900c2e4b5f75b7c0d4e6796fcc234cb1",
@@ -317,7 +328,8 @@
       "name": "HP Enterprise • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/hpe.png",
+      "wideMark": true
     },
     {
       "address": "0xaea445c5f3db1a462998ccc422a875a361ee5d99",
@@ -333,7 +345,8 @@
       "name": "IBM • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/ibm.png",
+      "wideMark": true
     },
     {
       "address": "0xacef2e09adb47ad6abebad9ff06689e60615c2b6",
@@ -349,7 +362,8 @@
       "name": "Intel • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/intc.png",
+      "wideMark": true
     },
     {
       "address": "0x558378e000d634a36593e338ebacdd6207640efe",
@@ -429,7 +443,8 @@
       "name": "Monolithic Power Systems • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/mpwr.png",
+      "wideMark": true
     },
     {
       "address": "0x43b07d15ce533bec5476d70c22a78a1b2b662155",
@@ -493,7 +508,8 @@
       "name": "Cloudflare, Inc. Class A common stock • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/net.png",
+      "wideMark": true
     },
     {
       "address": "0xe0444ef8bf4ed74f74fd73686e2ddf4c1c5591e8",
@@ -525,7 +541,8 @@
       "name": "Nu • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/nu.png",
+      "wideMark": true
     },
     {
       "address": "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec",
@@ -621,7 +638,8 @@
       "name": "Quantum Computing • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/qubt.png",
+      "wideMark": true
     },
     {
       "address": "0xf0c4bf4c582cb3836e98394b1d4e7b7281101be8",
@@ -637,7 +655,8 @@
       "name": "Red Cat • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/rcat.png",
+      "wideMark": true
     },
     {
       "address": "0x05b37fb53a299a1b874a619e1c4c404d52c36f4c",
@@ -661,7 +680,8 @@
       "name": "Rocket Lab Corporation • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/rklb.png",
+      "wideMark": true
     },
     {
       "address": "0x756bc80af765c82da966a788858d65adf14f3793",
@@ -765,7 +785,8 @@
       "name": "SPDR S&P 500 ETF Trust • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/spy.png",
+      "wideMark": true
     },
     {
       "address": "0xb1969f6604ca1ae7a2cd3f1827876e914594ca2d",
@@ -773,7 +794,8 @@
       "name": "T1 Energy • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/te.png",
+      "wideMark": true
     },
     {
       "address": "0x322f0929c4625ed5bad873c95208d54e1c003b2d",
@@ -941,7 +963,8 @@
       "name": "Zoom • Robinhood Token",
       "decimals": 18,
       "scaled": true,
-      "icon": null
+      "icon": "/tokens/zm.png",
+      "wideMark": true
     }
   ]
 }
