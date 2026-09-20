@@ -5,8 +5,10 @@ import { tokenBySymbol, underlyingTicker } from "./tokens"
  *
  * The registry in `data/tokens.mainnet.json` is generated from the chain and its images are
  * committed, so the common case is a local file that needs no network at all. A symbol the
- * registry has never seen falls through to an equity logo host, and `AssetMark` falls through
- * again to initials when even that has nothing.
+ * registry has never seen falls through to an equity logo host. A token whose logo the circle
+ * cannot carry has no icon in the registry at all, and `AssetMark` shows its ticker instead:
+ * `fit-token-logos` drops a wordmark rather than leave the interface pointing at an image
+ * nobody can read at the size it is drawn.
  */
 const shipped: Record<string, string> = {
   USDG: "/usdg.svg",
@@ -25,15 +27,26 @@ const standsFor: Record<string, string> = {
   tGOLD: "GLD"
 }
 
-export const assetIconSrc = (symbol: string) => {
+export const assetTicker = (symbol: string) => standsFor[symbol] ?? underlyingTicker(symbol)
+
+export const assetIconSrc = (symbol: string): string | null => {
   const own = shipped[symbol]
   if (own) return own
   const exact = tokenBySymbol(symbol)
   if (exact?.icon) return exact.icon
-  const ticker = standsFor[symbol] ?? underlyingTicker(symbol)
+  const ticker = assetTicker(symbol)
   const underlying = tokenBySymbol(ticker)
-  if (underlying?.icon) return underlying.icon
+  if (underlying) return underlying.icon
   return `https://financialmodelingprep.com/image-stock/${ticker}.png`
 }
 
-export const assetInitials = (symbol: string) => underlyingTicker(symbol).slice(0, 2)
+/**
+ * What a mark says when it carries no logo.
+ *
+ * The ticker whole where it fits the circle, and its first two letters where it does not, so the
+ * mark names the asset rather than abbreviating it for the sake of abbreviating.
+ */
+export const assetInitials = (symbol: string) => {
+  const ticker = assetTicker(symbol)
+  return ticker.length <= 4 ? ticker : ticker.slice(0, 2)
+}

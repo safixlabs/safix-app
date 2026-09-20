@@ -42,8 +42,12 @@ export function markOffered(token: Address) {
  */
 const imageFor = (symbol: string) => {
   if (typeof window === "undefined") return undefined
+  // An asset whose logo the circle cannot carry has none to hand over either. A
+  // wallet showing no image is better than one showing an unreadable card.
+  const src = assetIconSrc(symbol)
+  if (!src) return undefined
   try {
-    return new URL(assetIconSrc(symbol), window.location.origin).href
+    return new URL(src, window.location.origin).href
   } catch {
     return undefined
   }

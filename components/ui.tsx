@@ -35,13 +35,14 @@ export function AssetMark({
   label?: string
 }) {
   const [failed, setFailed] = useState(false)
-  if (failed) {
+  const src = assetIconSrc(symbol)
+  if (failed || !src) {
     return (
       <span
         role={label ? "img" : undefined}
         aria-label={label}
         aria-hidden={label ? undefined : true}
-        className={`flex shrink-0 items-center justify-center rounded-full border border-line bg-carbon text-[10px] font-semibold tracking-[-0.01em] text-mist ${className}`}
+        className={`flex shrink-0 items-center justify-center rounded-full border border-line bg-carbon text-[9px] font-semibold tracking-[-0.02em] text-mist ${className}`}
       >
         {assetInitials(symbol)}
       </span>
@@ -54,7 +55,7 @@ export function AssetMark({
       className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full ${symbol === "USDG" || symbol === "tUSDG" ? "" : "border border-line bg-chip p-[3px]"} ${className}`}
     >
       <img
-        src={assetIconSrc(symbol)}
+        src={src}
         alt={label ?? ""}
         onError={() => setFailed(true)}
         className="block h-full w-full object-contain"
@@ -156,7 +157,7 @@ export function SummaryRow({ label, value }: { label: ReactNode; value: ReactNod
 }
 
 export function UsdgMark({ className = "h-4 w-4" }: { className?: string }) {
-  return <img src={assetIconSrc("USDG")} alt="" width={24} height={24} className={`block shrink-0 object-contain ${className}`} />
+  return <img src={assetIconSrc("USDG") ?? undefined} alt="" width={24} height={24} className={`block shrink-0 object-contain ${className}`} />
 }
 
 export function Usdg({ className = "" }: { className?: string }) {
