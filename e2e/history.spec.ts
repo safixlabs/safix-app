@@ -263,6 +263,12 @@ test.describe.serial("history", () => {
   })
 
   test("the history is read again only while the tab is visible", async ({ page }) => {
+    // This one waits out two intervals with the tab hidden and polls across two
+    // more, so its floor is set by REFRESH_MS rather than by anything it can
+    // hurry: the suite's 90 second budget is below its own worst case. Budgeted
+    // from the same constant, so changing the interval cannot silently put it
+    // back over the edge.
+    test.setTimeout(REFRESH_MS * 6 + 60_000)
     const sent: number[] = []
     page.on("request", request => {
       if (isLogQuery(request.url(), request.postData())) sent.push(Date.now())
