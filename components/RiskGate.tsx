@@ -91,7 +91,7 @@ export default function RiskGate({ open, onAccept, onDismiss }: { open: boolean;
           aria-modal="true"
           aria-labelledby="risk-gate-title"
           aria-describedby="risk-gate-body"
-          className="max-h-[85vh] w-full max-w-[460px] overflow-y-auto rounded-[3px] border border-line bg-panel p-5 sm:p-6"
+          className="max-h-[85vh] w-full max-w-[460px] overflow-y-auto rounded-[var(--corner-dialog)] border border-line bg-panel p-5 sm:p-6"
         >
           <h2 id="risk-gate-title" className="text-[19px] font-bold tracking-[-0.01em] text-fog">
             Before you connect

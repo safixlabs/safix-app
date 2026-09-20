@@ -3,6 +3,7 @@
 import { useAccount, useSwitchChain } from "wagmi"
 import { activeChain } from "@/lib/chain"
 import { humanError } from "@/lib/errors"
+import RobinhoodText from "./RobinhoodText"
 
 /**
  * A wallet can sit on a chain Safix does not run on, and over WalletConnect it
@@ -28,17 +29,17 @@ export default function NetworkNotice() {
           <p className="mt-0.5 text-[12.5px] leading-[1.5] tracking-[-0.01em] text-mist">
             {error ? (
               <>
-                {humanError(error)} Add {activeChain.name} in your wallet, then reconnect.
+                {humanError(error)} Add <RobinhoodText>{activeChain.name}</RobinhoodText> in your wallet, then reconnect.
               </>
             ) : (
-              <>Safix runs on {activeChain.name}. Nothing on screen is yours until you switch.</>
+              <>Safix runs on <RobinhoodText>{activeChain.name}</RobinhoodText>. Nothing on screen is yours until you switch.</>
             )}
           </p>
         </div>
         <button
           onClick={() => switchChain({ chainId: activeChain.id })}
           disabled={isPending}
-          className="shrink-0 self-start rounded-[3px] bg-mint px-4 py-2 text-[12.5px] font-semibold tracking-[-0.01em] text-ink transition-colors hover:bg-mint-bright disabled:bg-line disabled:text-haze sm:self-auto"
+          className={`${activeChain.name.startsWith("Robinhood") ? "robinhood-action " : ""}shrink-0 self-start rounded-[var(--corner-control)] bg-mint px-4 py-2 text-[12.5px] font-semibold tracking-[-0.01em] text-ink transition-colors hover:bg-mint-bright disabled:bg-line disabled:text-haze sm:self-auto`}
         >
           {isPending ? "Switching…" : `Switch to ${activeChain.name}`}
         </button>

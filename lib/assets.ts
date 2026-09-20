@@ -9,8 +9,8 @@ import { tokenBySymbol, underlyingTicker } from "./tokens"
  * again to initials when even that has nothing.
  */
 const shipped: Record<string, string> = {
-  USDG: "/usdg.png",
-  tUSDG: "/usdg.png"
+  USDG: "/usdg.svg",
+  tUSDG: "/usdg.svg"
 }
 
 /**

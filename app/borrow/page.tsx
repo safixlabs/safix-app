@@ -433,7 +433,7 @@ function LiveBorrow() {
                     aria-label={`Select ${candidate.symbol} as collateral`}
                     aria-pressed={index === assetIndex}
                     onClick={() => setAssetIndex(index)}
-                    className={`flex w-full items-center justify-between gap-3 rounded-[3px] border px-4 py-3.5 text-left transition-colors ${
+                    className={`flex w-full items-center justify-between gap-3 rounded-[var(--corner-control)] border px-4 py-3.5 text-left transition-colors ${
                       index === assetIndex ? "border-mint bg-carbon/60" : "border-control bg-carbon/30 hover:border-mint"
                     }`}
                   >
@@ -529,9 +529,9 @@ function LiveBorrow() {
         </div>
 
         <div className="flex flex-col gap-4">
-          <Panel title={<><UsdgMark className="h-[18px] w-[18px]" />Draw USDG</>}>
+          <Panel title={<><UsdgMark className="h-6 w-6" />Draw USDG</>}>
             <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2.5 rounded-[3px] border border-line bg-carbon/30 p-3.5">
+              <div className="flex flex-col gap-2.5 rounded-[var(--corner-control)] border border-line bg-carbon/30 p-3.5">
                 <div className="flex items-baseline justify-between text-[13.5px] tracking-[-0.01em]">
                   <span className="text-fog">Available to draw</span>
                   <span className="font-semibold text-fog [font-variant-numeric:tabular-nums]">
@@ -612,13 +612,13 @@ function LiveBorrow() {
                   {debtAfter > 0n ? (
                     <HealthBadge health={healthAfter} liqThresholdBps={liqThresholdBps} hasDebt />
                   ) : (
-                    <span className="text-haze">–</span>
+                    <span className="text-haze">N/A</span>
                   )}
                 </div>
               </div>
 
               {needsAcknowledgement ? (
-                <label className="flex cursor-pointer items-start gap-2.5 rounded-[3px] border border-amber/60 bg-carbon/40 p-3 text-[12.5px] leading-[1.5] tracking-[-0.01em] text-mist">
+                <label className="flex cursor-pointer items-start gap-2.5 rounded-[var(--corner-control)] border border-amber/60 bg-carbon/40 p-3 text-[12.5px] leading-[1.5] tracking-[-0.01em] text-mist">
                   <input
                     type="checkbox"
                     checked={acceptedRisk}

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import RobinhoodText from "./RobinhoodText"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { activeChain } from "@/lib/chain"
 import { reportCacheHealth, useReadHealth } from "@/lib/health"
@@ -147,7 +148,7 @@ export default function RpcNotice() {
         <div className="min-w-0">
           <p className="text-[13px] font-semibold tracking-[-0.01em] text-fog">Live data is not loading</p>
           <p className="mt-0.5 text-[12.5px] leading-[1.5] tracking-[-0.01em] text-mist">
-            {where}{" "}
+            <RobinhoodText>{where}</RobinhoodText>{" "}
             {health.lastGood
               ? `Everything on screen was last confirmed ${age(health.lastGood)} and may have moved since.`
               : "Nothing on screen has been confirmed against the chain yet."}
@@ -159,7 +160,7 @@ export default function RpcNotice() {
             queryClient.refetchQueries({ type: "active" })
           }}
           disabled={probe.isFetching}
-          className="shrink-0 self-start rounded-[3px] border border-line px-4 py-2 text-[12.5px] font-medium tracking-[-0.01em] text-mist transition-colors hover:border-mint hover:text-mint disabled:opacity-50 sm:self-auto"
+          className="shrink-0 self-start rounded-[var(--corner-control)] border border-line px-4 py-2 text-[12.5px] font-medium tracking-[-0.01em] text-mist transition-colors hover:border-mint hover:text-mint disabled:opacity-50 sm:self-auto"
         >
           {probe.isFetching ? "Retrying…" : "Retry"}
         </button>

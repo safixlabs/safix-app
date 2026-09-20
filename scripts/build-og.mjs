@@ -9,7 +9,7 @@
 // gets an image without this script being touched.
 
 import { createRequire } from "node:module"
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -46,7 +46,7 @@ const fonts = [
   { name: "DM Sans", data: read("assets/fonts/DMSans-Bold.ttf"), weight: 700, style: "normal" }
 ]
 
-const mark = `data:image/png;base64,${read("assets/brand/mark.png").toString("base64")}`
+const mark = `data:image/png;base64,${read("app/icon.png").toString("base64")}`
 
 const surfaces = JSON.parse(readFileSync(join(root, "site.config.json"), "utf8"))
 const here = surfaces.surfaces.app
@@ -91,8 +91,7 @@ function card({ title, group }) {
       height: "100%",
       background: CARBON,
       fontFamily: "DM Sans",
-      padding: "72px 80px",
-      borderTop: `10px solid ${MINT}`
+      padding: "72px 80px"
     },
     children: [
       el("div", {
@@ -162,6 +161,7 @@ function card({ title, group }) {
               border: `2px solid ${LINE}`,
               color: MINT,
               padding: "8px 18px",
+              borderRadius: 12,
               fontSize: 21
             },
             children: "Private credit for tokenized assets"
@@ -174,7 +174,6 @@ function card({ title, group }) {
 
 async function main() {
   const pages = readPages()
-  rmSync(outDir, { recursive: true, force: true })
   mkdirSync(outDir, { recursive: true })
 
   for (const page of pages) {

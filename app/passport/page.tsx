@@ -42,7 +42,7 @@ function LivePassport() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat
           label="Status"
-          value={!address ? "–" : eligible.data ? "Eligible" : "Incomplete"}
+          value={!address ? "N/A" : eligible.data ? "Eligible" : "Incomplete"}
           hint={
             !address
               ? "Connect a wallet"
@@ -51,7 +51,7 @@ function LivePassport() {
                 : "No expiry set"
           }
         />
-        <Stat label="Checks passed" value={address ? `${passed}/${passportChecks.length}` : "–"} hint="Attested onchain" />
+        <Stat label="Checks passed" value={address ? `${passed}/${passportChecks.length}` : "N/A"} hint="Attested onchain" />
         <Stat label="Holdings disclosed" value="0%" hint="Eligibility signals only" />
       </div>
 

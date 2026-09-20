@@ -23,6 +23,10 @@
    Run `npm run contrast` after touching any of these. */
 :root {
   color-scheme: dark;
+  --corner-panel: 16px;
+  --corner-control: 10px;
+  --corner-small: 6px;
+  --corner-dialog: 20px;
   --surface-canvas: #070c0c;
   /* The one surface that does not follow the theme. Equity marks are mostly dark ink on
      transparency, so a chip that goes dark takes the logo with it. */
@@ -47,18 +51,18 @@
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     color-scheme: light;
-    --surface-canvas: #f4f8f7;
+    --surface-canvas: #f5f6f5;
     --surface-panel: #ffffff;
-    --surface-accent: #d8f4ec;
-    --accent: #077760;
-    --accent-strong: #05604e;
+    --surface-accent: #d5f8ef;
+    --accent: #007760;
+    --accent-strong: #005a48;
     --on-accent: #ffffff;
-    --text-strong: #06201b;
-    --text-body: #3c534e;
-    --text-muted: #526960;
-    --border-hairline: #d9e6e2;
-    --border-control: #6d847d;
-    --backdrop-opacity: 0.28;
+    --text-strong: #101917;
+    --text-body: #35433e;
+    --text-muted: #52605a;
+    --border-hairline: #d3d9d6;
+    --border-control: #64736c;
+    --backdrop-opacity: 0;
     --warning: #96650a;
     --critical: #b03024;
   }
@@ -66,18 +70,18 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --surface-canvas: #f4f8f7;
+  --surface-canvas: #f5f6f5;
   --surface-panel: #ffffff;
-  --surface-accent: #d8f4ec;
-  --accent: #077760;
-  --accent-strong: #05604e;
+  --surface-accent: #d5f8ef;
+  --accent: #007760;
+  --accent-strong: #005a48;
   --on-accent: #ffffff;
-  --text-strong: #06201b;
-  --text-body: #3c534e;
-  --text-muted: #526960;
-  --border-hairline: #d9e6e2;
-  --border-control: #6d847d;
-  --backdrop-opacity: 0.28;
+  --text-strong: #101917;
+  --text-body: #35433e;
+  --text-muted: #52605a;
+  --border-hairline: #d3d9d6;
+  --border-control: #64736c;
+  --backdrop-opacity: 0;
   --warning: #96650a;
   --critical: #b03024;
 }
@@ -94,12 +98,39 @@
     @apply bg-mint/25;
   }
 
+  /* Actionable controls use a hand cursor in both themes. Text entry keeps its caret. */
+  :where(button, a[href], summary, select, [role="button"], [role="tab"],
+    input[type="button"], input[type="submit"], input[type="reset"],
+    input[type="checkbox"], input[type="radio"], input[type="file"]
+  ):not(:disabled):not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  :where(button, select, input, textarea):disabled,
+  :where(a[href], button, [role="button"], [role="tab"])[aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
   /* A visible focus ring on anything focusable, so a keyboard user is never lost. Zero
      specificity, so a component can still place its own ring. */
   :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
+}
+
+/* Quiet surfaces and soft corners. Decorative strokes are intentionally absent;
+   retain only the borders that separate controls, data and sections. */
+.terminal-page-header {
+  padding-bottom: 24px;
+}
+
+.terminal-panel {
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.04);
+}
+
+.terminal-nav-link[aria-current="page"] {
+  background: var(--surface-panel);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -109,5 +140,89 @@
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+}
+
+/* Robin Neon belongs to network branding, never to financial risk states. */
+/* Approved light surfaces. Explicit dark mode is excluded from every rule. */
+:root[data-theme="light"] .terminal-nav { background: #fff; backdrop-filter: none; border-color: #cdd5d1; }
+:root[data-theme="light"] .terminal-nav-link { border-radius: 8px; color: #35433e; }
+:root[data-theme="light"] .terminal-nav-link:hover { background: #f2f5f3; color: #18221e; }
+:root[data-theme="light"] .terminal-nav-link[aria-current="page"] { background: #08caa4; color: #05251e; font-weight: 600; }
+:root[data-theme="light"] .terminal-panel, :root[data-theme="light"] .terminal-stat {
+  background: #fff; border-color: transparent;
+  box-shadow: 0 2px 3px rgb(10 24 18 / .035), 0 0 0 1px rgb(10 24 18 / .18);
+}
+:root[data-theme="light"] input { background: #fafcfb; }
+:root[data-theme="light"] button[aria-pressed="true"] { background: #08caa4; color: #05251e; font-weight: 600; }
+:root[data-theme="light"] .terminal-connect-wallet:not(:disabled) { background: #101917; color: #fff; }
+:root[data-theme="light"] .terminal-connect-wallet:not(:disabled):hover { background: #293a34; }
+@media (prefers-color-scheme: light) {
+:root:not([data-theme="dark"]) .terminal-nav { background: #fff; backdrop-filter: none; border-color: #cdd5d1; }
+:root:not([data-theme="dark"]) .terminal-nav-link { border-radius: 8px; color: #35433e; }
+:root:not([data-theme="dark"]) .terminal-nav-link:hover { background: #f2f5f3; color: #18221e; }
+:root:not([data-theme="dark"]) .terminal-nav-link[aria-current="page"] { background: #08caa4; color: #05251e; font-weight: 600; }
+:root:not([data-theme="dark"]) .terminal-panel, :root:not([data-theme="dark"]) .terminal-stat {
+  background: #fff; border-color: transparent;
+  box-shadow: 0 2px 3px rgb(10 24 18 / .035), 0 0 0 1px rgb(10 24 18 / .18);
+}
+:root:not([data-theme="dark"]) input { background: #fafcfb; }
+:root:not([data-theme="dark"]) button[aria-pressed="true"] { background: #08caa4; color: #05251e; font-weight: 600; }
+:root:not([data-theme="dark"]) .terminal-connect-wallet:not(:disabled) { background: #101917; color: #fff; }
+:root:not([data-theme="dark"]) .terminal-connect-wallet:not(:disabled):hover { background: #293a34; }
+}
+
+.robinhood-text, .robinhood-badge { color: #ccff00; }
+.robinhood-action:not(:disabled) { background: #ccff00; color: #000; }
+.robinhood-action:not(:disabled):hover { background: #ddff55; }
+/* Hover feedback is limited to actionable surfaces and precise pointing devices. */
+@media (hover: hover) and (pointer: fine) {
+  :root .terminal-hover-surface:not(:disabled):not([aria-disabled="true"]):hover,
+  :root button[aria-pressed="false"]:not(:disabled):not([aria-disabled="true"]):hover,
+  :root .terminal-nav-link:not([aria-current="page"]):hover {
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface-panel));
+    border-color: var(--accent);
+    color: var(--text-strong);
+  }
+  :root button[aria-pressed="true"]:not(:disabled):not([aria-disabled="true"]):hover,
+  :root .terminal-nav-link[aria-current="page"]:hover {
+    filter: brightness(1.12);
+  }
+  :root[data-theme="light"] button[aria-pressed="true"]:not(:disabled):not([aria-disabled="true"]):hover,
+  :root[data-theme="light"] .terminal-nav-link[aria-current="page"]:hover {
+    background: #06b996;
+    color: #05251e;
+    filter: none;
+  }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) button[aria-pressed="true"]:not(:disabled):not([aria-disabled="true"]):hover,
+  :root:not([data-theme="dark"]) .terminal-nav-link[aria-current="page"]:hover {
+    background: #06b996;
+    color: #05251e;
+    filter: none;
+  }
+}
+
+/* Neon text on white is unreadable. Keep the exact brand colour as its backing. */
+:root[data-theme="light"] .robinhood-text,
+:root[data-theme="light"] .robinhood-badge {
+  color: #000;
+  background: #ccff00;
+}
+:root[data-theme="light"] .robinhood-text {
+  border-radius: 3px;
+  padding-inline: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .robinhood-text,
+  :root:not([data-theme="dark"]) .robinhood-badge { color: #000; background: #ccff00; }
+  :root:not([data-theme="dark"]) .robinhood-text {
+    border-radius: 3px;
+    padding-inline: 2px;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
   }
 }

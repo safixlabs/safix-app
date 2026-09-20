@@ -26,14 +26,14 @@ function TokenRow({ token }: { token: ChainToken }) {
         href={`${tokenRegistry.explorer}/address/${token.address}`}
         target="_blank"
         rel="noreferrer"
-        className="flex items-center gap-3.5 rounded-[3px] border border-line bg-carbon/30 px-4 py-3 transition-colors hover:border-mint"
+        className="terminal-hover-surface flex items-center gap-3.5 rounded-[var(--corner-control)] border border-line bg-carbon/30 px-4 py-3 transition-colors hover:border-mint"
       >
         <AssetMark symbol={token.symbol} className="h-9 w-9" />
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-baseline gap-2">
             <span className="truncate text-[14.5px] font-semibold tracking-[-0.01em] text-fog">{token.symbol}</span>
             {isAccepted ? (
-              <span className="rounded-[3px] border border-mint px-1.5 py-px text-[10.5px] font-medium tracking-[-0.01em] text-mint">
+              <span className="rounded-[var(--corner-control)] border border-mint px-1.5 py-px text-[10.5px] font-medium tracking-[-0.01em] text-mint">
                 Collateral
               </span>
             ) : null}
@@ -104,7 +104,7 @@ export default function AssetsPage() {
               onChange={event => setQuery(event.target.value)}
               placeholder="Search a symbol, a name or an address"
               aria-label="Search the asset directory"
-              className="w-full rounded-[3px] border border-control bg-carbon/40 px-3.5 py-2 text-[13.5px] tracking-[-0.01em] text-fog placeholder:text-haze sm:max-w-[320px]"
+              className="w-full rounded-[var(--corner-control)] border border-control bg-carbon/40 px-3.5 py-2 text-[13.5px] tracking-[-0.01em] text-fog placeholder:text-haze sm:max-w-[320px]"
             />
             <div role="group" aria-label="Filter the directory" className="flex gap-2 overflow-x-auto">
               {filters.map(option => (
@@ -112,7 +112,7 @@ export default function AssetsPage() {
                   key={option.value}
                   onClick={() => setFilter(option.value)}
                   aria-pressed={filter === option.value}
-                  className={`shrink-0 rounded-[3px] border px-3 py-1.5 text-[12.5px] tracking-[-0.01em] transition-colors ${
+                  className={`shrink-0 rounded-[var(--corner-control)] border px-3 py-1.5 text-[12.5px] tracking-[-0.01em] transition-colors ${
                     filter === option.value
                       ? "border-mint text-mint"
                       : "border-control text-mist hover:border-mint hover:text-mint"

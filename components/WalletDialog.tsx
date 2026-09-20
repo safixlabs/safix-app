@@ -13,7 +13,7 @@ import { Reason } from "./ui"
 function WalletIcon({ option }: { option: WalletOption }) {
   if (option.icon) {
     return (
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[3px] bg-carbon">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[var(--corner-control)] bg-carbon">
         <img src={option.icon} alt="" className="h-full w-full object-contain" />
       </span>
     )
@@ -21,7 +21,7 @@ function WalletIcon({ option }: { option: WalletOption }) {
 
   if (option.kind === "coinbase") {
     return (
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[3px] bg-[#0052ff]">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--corner-control)] bg-[#0052ff]">
         <svg viewBox="0 0 32 32" aria-hidden className="h-5 w-5">
           <circle cx="16" cy="16" r="16" fill="#0052ff" />
           <path d="M16 4.6a11.4 11.4 0 1 0 0 22.8 11.4 11.4 0 0 0 0-22.8zm-2.7 8.1c0-.5.4-.9.9-.9h3.6c.5 0 .9.4.9.9v6.6c0 .5-.4.9-.9.9h-3.6a.9.9 0 0 1-.9-.9v-6.6z" fill="#fff" />
@@ -32,7 +32,7 @@ function WalletIcon({ option }: { option: WalletOption }) {
 
   if (option.kind === "walletconnect") {
     return (
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[3px] border border-line bg-carbon text-mint">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--corner-control)] border border-line bg-carbon text-mint">
         <svg viewBox="0 0 32 32" aria-hidden className="h-5 w-5">
           <path
             d="M9.3 12.4c3.7-3.6 9.7-3.6 13.4 0l.5.4c.2.2.2.5 0 .7l-1.6 1.5c-.1.1-.2.1-.3 0l-.6-.6c-2.6-2.5-6.8-2.5-9.4 0l-.7.7c-.1.1-.2.1-.3 0L8.7 13.5c-.2-.2-.2-.5 0-.7zm16.5 3.1 1.5 1.4c.2.2.2.5 0 .7l-6.6 6.4c-.2.2-.5.2-.7 0l-4.7-4.6c0-.1-.1-.1-.2 0l-4.7 4.6c-.2.2-.5.2-.7 0L2.7 17.6c-.2-.2-.2-.5 0-.7l1.5-1.4c.2-.2.5-.2.7 0l4.7 4.6c.1.1.2.1.2 0l4.7-4.6c.2-.2.5-.2.7 0l4.7 4.6c.1.1.2.1.2 0l4.7-4.6c.2-.2.5-.2.7 0z"
@@ -44,7 +44,7 @@ function WalletIcon({ option }: { option: WalletOption }) {
   }
 
   return (
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[3px] border border-line bg-carbon text-[11px] font-semibold text-mist">
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--corner-control)] border border-line bg-carbon text-[11px] font-semibold text-mist">
       {option.name.slice(0, 2).toUpperCase()}
     </span>
   )
@@ -53,7 +53,7 @@ function WalletIcon({ option }: { option: WalletOption }) {
 /** Nothing at all to connect with: no browser wallet, no WalletConnect, no Coinbase. */
 function NoWalletState() {
   return (
-    <div className="rounded-[3px] border border-line bg-carbon/40 p-5">
+    <div className="rounded-[var(--corner-control)] border border-line bg-carbon/40 p-5">
       <p className="text-[14px] font-semibold tracking-[-0.01em] text-fog">No wallet available</p>
       <p className="mt-2 text-[13.5px] leading-[1.6] tracking-[-0.01em] text-mist">
         This browser has no wallet installed, and no remote wallet option is configured on this
@@ -76,7 +76,7 @@ function NoWalletState() {
 /** A wallet can still be reached, but not from this browser directly. */
 function NoBrowserWalletNotice() {
   return (
-    <div className="mb-4 rounded-[3px] border border-line bg-carbon/40 p-4">
+    <div className="mb-4 rounded-[var(--corner-control)] border border-line bg-carbon/40 p-4">
       <p className="text-[13.5px] font-semibold tracking-[-0.01em] text-fog">
         No wallet extension in this browser
       </p>
@@ -157,7 +157,7 @@ export default function WalletDialog({ open, onClose }: { open: boolean; onClose
           aria-modal="true"
           aria-labelledby="wallet-dialog-title"
           onClick={event => event.stopPropagation()}
-          className="max-h-[85vh] w-full max-w-[420px] overflow-y-auto rounded-[3px] border border-line bg-panel p-6"
+          className="max-h-[85vh] w-full max-w-[420px] overflow-y-auto rounded-[var(--corner-dialog)] border border-line bg-panel p-6"
         >
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -194,7 +194,7 @@ export default function WalletDialog({ open, onClose }: { open: boolean; onClose
                         onClick={() => pick(option.connector)}
                         disabled={isPending}
                         aria-describedby={isPending ? reasonId : undefined}
-                        className="flex w-full items-center gap-3.5 rounded-[3px] border border-line bg-carbon/30 px-4 py-3.5 text-left transition-colors hover:border-mint disabled:cursor-not-allowed disabled:opacity-50"
+                        className="terminal-hover-surface flex w-full items-center gap-3.5 rounded-[var(--corner-control)] border border-line bg-carbon/30 px-4 py-3.5 text-left transition-colors hover:border-mint disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <WalletIcon option={option} />
                         <span className="min-w-0 flex-1">

@@ -230,13 +230,13 @@ function LiveDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat
           label="Collateral value"
-          value={address ? usd(collateralValue) : "–"}
+          value={address ? usd(collateralValue) : "N/A"}
           hint={address ? `${rows.length} position${rows.length === 1 ? "" : "s"}` : "Connect a wallet"}
         />
-        <Stat label="Active debt" value={address ? usd(totalDebt) : "–"} hint="Fixed since draw, no accrual" />
+        <Stat label="Active debt" value={address ? usd(totalDebt) : "N/A"} hint="Fixed since draw, no accrual" />
         <Stat
-          label={<><UsdgMark className="h-3.5 w-3.5" />Pool deposit</>}
-          value={address ? usd(deposit) : "–"}
+          label={<><UsdgMark />Pool deposit</>}
+          value={address ? usd(deposit) : "N/A"}
           hint="Compounded after liquidations"
         />
         <Stat label="Network" value="Live" hint="Reading Safix contracts onchain" />

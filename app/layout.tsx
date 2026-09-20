@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import Link from "next/link"
 import type { ReactNode } from "react"
-import { DM_Sans } from "next/font/google"
+import { Red_Hat_Display } from "next/font/google"
 import "./globals.css"
 import Backdrop from "@/components/Backdrop"
 import RpcNotice from "@/components/RpcNotice"
@@ -11,8 +11,9 @@ import Providers from "./providers"
 import { legalLinks } from "@/components/nav"
 import { absolute, allSurfaces, baseUrl, self } from "@/lib/site"
 
-const sans = DM_Sans({
+const sans = Red_Hat_Display({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-sans-src"
 })
 
@@ -66,7 +67,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <a
           href="#main"
-          className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-4 focus-visible:top-4 focus-visible:z-50 focus-visible:rounded-[3px] focus-visible:bg-mint focus-visible:px-4 focus-visible:py-2 focus-visible:text-[13px] focus-visible:font-semibold focus-visible:text-ink"
+          className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-4 focus-visible:top-4 focus-visible:z-50 focus-visible:rounded-[var(--corner-control)] focus-visible:bg-mint focus-visible:px-4 focus-visible:py-2 focus-visible:text-[13px] focus-visible:font-semibold focus-visible:text-ink"
         >
           Skip to content
         </a>
@@ -75,7 +76,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <Telemetry />
           <TopNav />
           <RpcNotice />
-          <main id="main" className="mx-auto w-full max-w-[1120px] px-6 pb-24 pt-10 md:pt-14">
+          <main id="main" className="mx-auto w-full max-w-[1120px] px-5 pb-24 pt-10 sm:px-6 md:pt-14">
             {children}
           </main>
         </Providers>

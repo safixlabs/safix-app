@@ -91,7 +91,7 @@ export function TxToast(state: TxState) {
       {visible && phase ? (
         <div
           data-testid="tx-status"
-          className="fixed bottom-5 right-5 z-50 w-[min(320px,calc(100vw-2.5rem))] rounded-[4px] border border-line bg-panel p-4 shadow-lg"
+          className="fixed bottom-5 right-5 z-50 w-[min(320px,calc(100vw-2.5rem))] rounded-[var(--corner-panel)] border border-line bg-panel p-4 shadow-lg"
         >
           <div className="flex items-start gap-3">
             <Dot phase={phase} />

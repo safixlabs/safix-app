@@ -68,13 +68,13 @@ function PoolStats({
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <Stat
-        label={<><UsdgMark className="h-3.5 w-3.5" />Pool size</>}
+        label={<><UsdgMark />Pool size</>}
         value={usd(poolSize)}
         hint="Deposited by liquidity providers"
       />
-      <div className="rounded-[4px] border border-line bg-panel/80 p-5">
-        <p className="text-[12.5px] tracking-[-0.02em] text-haze">Deployed to loans</p>
-        <p data-figure className="mt-2 text-[24px] font-bold leading-none tracking-[-0.01em] text-fog md:text-[27px]">
+      <div className="terminal-stat rounded-[var(--corner-panel)] border border-line bg-panel/80 p-5 sm:p-6">
+        <p className="text-[12px] font-medium tracking-[0.015em] text-haze">Deployed to loans</p>
+        <p data-figure className="mt-4 text-[26px] font-semibold leading-none tracking-[-0.03em] text-fog md:text-[30px]">
           {usd(deployed)}
         </p>
         <div className="mt-4">
@@ -87,7 +87,7 @@ function PoolStats({
       </div>
       <Stat
         label="Your share"
-        value={connected ? `${(share * 100).toFixed(2)}%` : "–"}
+        value={connected ? `${(share * 100).toFixed(2)}%` : "N/A"}
         hint={connected ? `${usd(yourDeposit)} of the pool` : "Connect a wallet"}
       />
     </div>
@@ -224,7 +224,7 @@ function LiquidityCard({
   const shareAfter = poolAfter > 0 ? depositAfter / poolAfter : 0
 
   return (
-    <Panel title={<><UsdgMark className="h-[18px] w-[18px]" />Manage liquidity</>}>
+    <Panel title={<><UsdgMark className="h-6 w-6" />Manage liquidity</>}>
       <div className="flex flex-col gap-4">
         <Segmented options={modeOptions} value={mode} onChange={setMode} label="Deposit or withdraw" />
 

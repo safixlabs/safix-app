@@ -12,13 +12,14 @@ import { walletOptions } from "@/lib/wallets"
 import RiskGate, { hasAcknowledgedRisk } from "./RiskGate"
 import NetworkNotice from "./NetworkNotice"
 import ThemeToggle from "./ThemeToggle"
+import RobinhoodText from "./RobinhoodText"
 import WalletDialog from "./WalletDialog"
 import { appLinks, normalizePath } from "./nav"
 
 const shortAddress = (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}`
 
 const actionClass =
-  "shrink-0 rounded-[3px] bg-mint px-3.5 py-2 text-[12.5px] font-semibold tracking-[-0.01em] text-ink transition-colors hover:bg-mint-bright disabled:bg-line disabled:text-haze sm:px-4.5 sm:text-[13px]"
+  "shrink-0 rounded-[var(--corner-control)] bg-mint px-3.5 py-2 text-[12.5px] font-semibold tracking-[-0.01em] text-ink transition-colors hover:bg-mint-bright disabled:bg-line disabled:text-haze sm:px-4.5 sm:text-[13px]"
 
 function WalletButton() {
   const { address, isConnected } = useAccount()
@@ -65,7 +66,7 @@ function WalletButton() {
               setGateOpen(true)
             }
           }}
-          className={actionClass}
+          className={`terminal-connect-wallet ${actionClass}`}
         >
           {anyWallet ? "Connect wallet" : "Connect"}
         </button>
@@ -77,7 +78,7 @@ function WalletButton() {
     <button
       onClick={disconnect}
       aria-label={address ? `Disconnect ${shortAddress(address)}` : "Disconnect wallet"}
-      className="shrink-0 rounded-[3px] border border-control px-4 py-2 text-[13px] font-medium tracking-[-0.01em] text-mist transition-colors hover:border-mint hover:text-mint sm:px-4.5"
+      className="shrink-0 rounded-[var(--corner-control)] border border-control px-4 py-2 text-[13px] font-medium tracking-[-0.01em] text-mist transition-colors hover:border-mint hover:text-mint sm:px-4.5"
     >
       {address ? shortAddress(address) : "Connected"}
     </button>
@@ -104,24 +105,21 @@ export default function TopNav() {
   }, [pathname])
 
   return (
-    <div className="sticky top-0 z-20 border-b border-line bg-carbon/80 backdrop-blur-md">
-      {/* Below md the links wrap onto their own row, so the wallet button stays reachable
+    <div className="terminal-nav sticky top-0 z-20 border-b border-line bg-carbon/80 backdrop-blur-md">
+      {/* Below lg the links wrap onto their own row, so the wallet button stays reachable
           on a phone instead of being hidden. */}
-      <div className="mx-auto flex w-full max-w-[1120px] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-6 py-3 md:py-4">
+      <div className="mx-auto flex w-full max-w-[1120px] flex-wrap items-center justify-between gap-x-4 gap-y-3 px-5 py-3 sm:px-6 lg:py-4">
         <div className="order-1 flex shrink-0 items-center gap-3">
           <Link href="/" className="flex items-center gap-2.5">
-<span
-              aria-hidden
-              className="h-7 w-7 shrink-0 bg-fog [mask-image:url(/logo.png)] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain]"
-            />
-            <span className="text-[19px] font-bold tracking-[-0.01em] text-fog">Safix</span>
+            <img src="/logo.png?v=weblogo2" alt="" width={32} height={32} className="block h-8 w-8 shrink-0 object-contain" />
+            <span className="text-[21px] font-bold tracking-[-0.03em] text-fog">Safix</span>
           </Link>
-          <span className="hidden whitespace-nowrap text-[11px] tracking-[-0.02em] text-haze lg:block">{activeChain.name}</span>
+          <span className="hidden max-w-[92px] border-l border-line pl-3 text-[10px] leading-[1.4] tracking-[0.01em] text-haze xl:block"><RobinhoodText>{activeChain.name}</RobinhoodText></span>
         </div>
         <nav
           ref={navRef}
           aria-label="Main"
-          className="order-3 -mx-1 flex w-full items-center gap-1 overflow-x-auto px-1 py-0.5 [-ms-overflow-style:none] [scrollbar-width:none] md:order-2 md:mx-0 md:w-auto md:px-0 [&::-webkit-scrollbar]:hidden"
+          className="order-3 -mx-1 flex w-full items-center gap-1 overflow-x-auto px-1 py-0.5 [-ms-overflow-style:none] [scrollbar-width:none] lg:order-2 lg:mx-0 lg:w-auto lg:px-0 [&::-webkit-scrollbar]:hidden"
         >
           {appLinks.map(link => {
             const active = normalizePath(link.href) === pathname
@@ -131,7 +129,7 @@ export default function TopNav() {
                 href={link.href}
                 ref={active ? activeLink : undefined}
                 aria-current={active ? "page" : undefined}
-                className={`whitespace-nowrap rounded-[3px] px-3 py-1.5 text-[13.5px] tracking-[-0.01em] transition-colors sm:px-3.5 ${
+                className={`terminal-nav-link whitespace-nowrap rounded-[var(--corner-control)] px-3 py-2 text-[13px] font-medium tracking-[-0.01em] transition-colors ${
                   active ? "bg-panel text-mint" : "text-mist hover:text-fog"
                 }`}
               >
@@ -140,7 +138,7 @@ export default function TopNav() {
             )
           })}
         </nav>
-        <div className="order-2 flex shrink-0 items-center gap-2 md:order-3">
+        <div className="order-2 flex shrink-0 items-center gap-2 lg:order-3">
           <ThemeToggle />
           <WalletButton />
         </div>

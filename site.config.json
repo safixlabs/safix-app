@@ -10,7 +10,7 @@
       "description": "Private credit for tokenized stocks and real-world assets."
     },
     "app": {
-      "name": "Safix app",
+      "name": "Safix Terminal",
       "role": "Application",
       "subdomain": "app",
       "currentUrl": "https://safix-app.vercel.app",

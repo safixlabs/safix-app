@@ -138,7 +138,7 @@ export function WalletOffer({
   return (
     <div
       role="status"
-      className="flex flex-col gap-3 rounded-[3px] border border-line bg-carbon/30 p-3.5 text-[12.5px] leading-[1.5] tracking-[-0.01em]"
+      className="flex flex-col gap-3 rounded-[var(--corner-control)] border border-line bg-carbon/30 p-3.5 text-[12.5px] leading-[1.5] tracking-[-0.01em]"
     >
       <p className="text-mist">
         {name} is in your wallet now, but most wallets do not list a token until they are told its

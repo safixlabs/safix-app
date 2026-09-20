@@ -38,7 +38,7 @@ function StatusPill({ status }: { status: number }) {
   const label = statusLabels[status] ?? "Unknown"
   return (
     <span
-      className={`rounded-[3px] border px-3 py-1 text-[12px] tracking-[-0.01em] ${
+      className={`rounded-[var(--corner-control)] border px-3 py-1 text-[12px] tracking-[-0.01em] ${
         status === 1
           ? "border-mint text-mint"
           : status === 2
@@ -240,10 +240,10 @@ function LivePartnerships() {
                   aria-valuenow={Math.round(Math.min(100, (row.funded / row.goal) * 100))}
                   aria-valuemin={0}
                   aria-valuemax={100}
-                  className="mt-2 h-1.5 w-full overflow-hidden rounded-none bg-line"
+                  className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-line"
                 >
                   <div
-                    className="h-full rounded-none bg-mint"
+                    className="h-full rounded-full bg-mint"
                     style={{ width: `${Math.min(100, (row.funded / row.goal) * 100)}%` }}
                   />
                 </div>
