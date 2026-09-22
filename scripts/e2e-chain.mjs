@@ -134,6 +134,12 @@ log(`running: ${command.join(" ")}`)
 
 const appEnv = {
   NEXT_PUBLIC_CHAIN: "local",
+  // The screens refresh on this interval, and one test has to sit through two of
+  // them with the tab hidden to prove that hiding stops the polling. At fifteen
+  // seconds that test spends a minute waiting and fails the moment a log read is
+  // slow; at two it proves exactly the same thing. The interval under test is the
+  // mechanism, not the number.
+  NEXT_PUBLIC_REFRESH_MS: "2000",
   NEXT_PUBLIC_POOL_ADDRESS: recorded.addresses.pool,
   NEXT_PUBLIC_USDG_ADDRESS: recorded.addresses.usdg,
   NEXT_PUBLIC_REGISTRY_ADDRESS: recorded.addresses.registry,
