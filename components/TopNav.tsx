@@ -10,6 +10,7 @@ import { activeChain } from "@/lib/chain"
 import { clearWalletStorage } from "@/lib/wagmi"
 import { walletOptions } from "@/lib/wallets"
 import RiskGate, { hasAcknowledgedRisk } from "./RiskGate"
+import GasNotice from "./GasNotice"
 import NetworkNotice from "./NetworkNotice"
 import ThemeToggle from "./ThemeToggle"
 import RobinhoodText from "./RobinhoodText"
@@ -144,6 +145,7 @@ export default function TopNav() {
         </div>
       </div>
       <NetworkNotice />
+      <GasNotice />
     </div>
   )
 }

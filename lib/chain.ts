@@ -80,3 +80,13 @@ export const explorerTxUrl = (hash?: `0x${string}`) =>
 
 export const explorerAddressUrl = (address?: `0x${string}`) =>
   address && explorers ? `${explorers.default.url}/address/${address}` : undefined
+
+/**
+ * Where someone gets gas for the chain this build talks to.
+ *
+ * Read from the environment rather than written here, because a faucet belongs
+ * to the chain's operator and can move without Safix changing. Unset means the
+ * interface still says a wallet has no gas; it just cannot say where to get some,
+ * which is better than sending anyone to an address that has stopped working.
+ */
+export const faucetUrl = process.env.NEXT_PUBLIC_FAUCET_URL || null
