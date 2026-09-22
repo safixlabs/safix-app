@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      redraw-baselines:
+        description: "Redraw the layout baselines instead of checking against them"
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -76,7 +82,14 @@ jobs:
           cache: false
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run e2e:live
+      - if: inputs.redraw-baselines != true
+        run: npm run e2e:live
+      # A layout baseline describes a screen, so it has to be redrawn whenever the
+      # screen changes, and only Linux draws the ones CI compares against. Run this
+      # workflow by hand with the box ticked after a deliberate change, download the
+      # artifact below and commit what is in it.
+      - if: inputs.redraw-baselines == true
+        run: npm run e2e:live -- npx playwright test e2e/visual.spec.ts --update-snapshots
       # The layout baselines are drawn here, because this is where the screens have
       # a chain to render. Uploaded on success as well, so the Linux baselines a
       # first run writes can be pulled down and committed.
