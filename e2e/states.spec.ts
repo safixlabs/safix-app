@@ -209,8 +209,15 @@ test.describe("states", () => {
       // point of the state. The control carries no description here because it is
       // not blocked: a residue below any position the pool would accept is still
       // offered as a maximum. See safixlabs/safix-app#44.
-      const sentence = "The pool is the tighter of the two right now, so that is the ceiling."
-      await expect(page.getByText(sentence)).toBeVisible({ timeout: 30_000 })
+      // Which of the two pool sentences appears depends on whether the drain left a
+      // residue: each provider's compounded deposit rounds down, so a few units can
+      // belong to nobody, and whether any survive is not something this test can
+      // decide. Both say the pool is what binds, and that is what is asserted here.
+      // The collateral sentence appearing would be the failure worth catching.
+      const poolIsTheCeiling =
+        /The pool is the tighter of the two right now, so that is the ceiling\.|The pool has no idle liquidity right now/
+      await expect(page.getByText(poolIsTheCeiling)).toBeVisible({ timeout: 30_000 })
+      await expect(page.getByText("Your collateral is the tighter of the two")).toBeHidden()
     } finally {
       for (const address of impersonated) await stopImpersonating(address)
       await revertChain(snapshot)
