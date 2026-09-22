@@ -347,4 +347,25 @@ test.describe.serial("money paths", () => {
     await expect(status.getByText("You cancelled the request in your wallet.")).toBeVisible()
     await expect(page.locator('[role="status"][aria-live="polite"]')).toContainText("Request cancelled")
   })
+
+  // ------------------------------------------------------------------ harness
+  test("an impersonated send is given more gas than it spends", async () => {
+    // viem does not estimate for an account the suite has no key for. It sends
+    // eth_sendTransaction with no limit at all and lets the node fill one, and
+    // anvil's fill was exact: a setup step that cost a gas more than the estimate
+    // ran out, which reverts with no data and reads as the pool refusing the call
+    // rather than as the harness being short. The limit is filled here now, and
+    // the room it leaves is the property that says the filling happened.
+    const owner = await publicClient.readContract({ abi: poolAbi, address: pool, functionName: "owner" })
+    const asOwner = await asAccount(owner)
+    try {
+      const price = (await publicClient.readContract({ abi: poolAbi, address: pool, functionName: "assetConfig", args: [tbill] }))[3]
+      const hash = await asOwner.writeContract({ abi: poolAbi, address: pool, functionName: "setPrice", args: [tbill, price] })
+      const receipt = await waitFor(hash)
+      const sent = await publicClient.getTransaction({ hash })
+      expect(sent.gas).toBeGreaterThan(receipt.gasUsed)
+    } finally {
+      await stopImpersonating(owner)
+    }
+  })
 })
