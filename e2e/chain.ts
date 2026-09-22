@@ -94,8 +94,17 @@ const withGasHeadroom = (url: string): Transport => {
       ...transport,
       async request(args: { method: string; params?: unknown }) {
         const result = await transport.request(args as never)
-        if (args.method !== "eth_estimateGas") return result
-        return `0x${((BigInt(result as string) * 5n) / 4n).toString(16)}`
+        const headroom = (value: string) => `0x${((BigInt(value) * 5n) / 4n).toString(16)}`
+        if (args.method === "eth_estimateGas") return headroom(result as string)
+        // viem fills a transaction through the node on some paths rather than
+        // asking for an estimate, and the limit arrives inside the filled object.
+        // Buffering only the estimate would leave exactly those calls short.
+        if (args.method === "eth_fillTransaction") {
+          const filled = result as { tx?: { gas?: string }; gas?: string } | null
+          if (filled?.tx?.gas) return { ...filled, tx: { ...filled.tx, gas: headroom(filled.tx.gas) } }
+          if (filled?.gas) return { ...filled, gas: headroom(filled.gas) }
+        }
+        return result
       }
     } as ReturnType<Transport>
   }
@@ -115,7 +124,7 @@ export const walletFor = (key: Hex) =>
 export async function asAccount(address: Address) {
   await testClient.impersonateAccount({ address })
   await testClient.setBalance({ address, value: 10n ** 20n })
-  return createWalletClient({ account: address, chain, transport: http(RPC_URL) })
+  return createWalletClient({ account: address, chain, transport: withGasHeadroom(RPC_URL) })
 }
 
 export const stopImpersonating = (address: Address) => testClient.stopImpersonatingAccount({ address })
