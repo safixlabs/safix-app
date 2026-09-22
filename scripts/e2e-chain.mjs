@@ -99,7 +99,11 @@ await assertContracts()
  * the app did. The fork is local, so the balance is simply set.
  */
 const fundAccounts = async () => {
-  const accounts = Object.values(config.accounts ?? {}).map(account => account.address ?? account)
+  // Only the entries that are accounts. The block carries a comment explaining what
+  // these keys are, and reading that as an address asks anvil to fund a sentence.
+  const accounts = Object.values(config.accounts ?? {})
+    .filter(account => account && typeof account === "object" && typeof account.address === "string")
+    .map(account => account.address)
   for (const address of accounts) {
     await rpc("anvil_setBalance", [address, "0x56bc75e2d63100000"])
   }
