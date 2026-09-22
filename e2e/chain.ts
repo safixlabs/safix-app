@@ -103,10 +103,23 @@ export async function waitFor(hash: Hex) {
   const receipt = await publicClient.waitForTransactionReceipt({ hash })
   if (receipt.status === "success") return receipt
   const sent = await publicClient.getTransaction({ hash })
+  // Gas exhaustion reverts with no data at all, and replaying the call with a
+  // generous limit then succeeds, which reads as "no reason given" and sends the
+  // reader looking for a contract bug that is not there. The receipt says which
+  // it was: a transaction that used every unit it was given ran out.
+  if (sent.gas === receipt.gasUsed) {
+    throw new Error(
+      `transaction ${hash} ran out of gas: used all ${receipt.gasUsed} it was given`
+    )
+  }
   const reason = await publicClient
     .call({ account: sent.from, to: sent.to ?? undefined, data: sent.input, blockNumber: receipt.blockNumber - 1n })
     .then(
-      () => "no reason given",
+      () =>
+        // The same call succeeds one block earlier, so what refused it was the
+        // state this block had rather than the call itself.
+        `no reason given, and the same call succeeds at block ${receipt.blockNumber - 1n}, `
+        + `so something in block ${receipt.blockNumber} refused it (used ${receipt.gasUsed} of ${sent.gas})`,
       (error: Error) => error.message.split("\n").find(line => line.includes("reverted")) ?? error.message.split("\n")[0]
     )
   throw new Error(`transaction ${hash} reverted: ${reason}`)
