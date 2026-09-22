@@ -74,36 +74,44 @@ export const bnvda = deployment.bnvda as Address
 export const tgold = deployment.tgold as Address
 
 /**
- * The node's gas estimate, with room to be wrong.
+ * A gas limit with room for the estimate behind it to be wrong.
  *
  * An estimate is made against the state at the time it is asked for, and the
- * transaction runs against the state it finds. A storage slot that was cold when
- * estimated and is still cold when executed costs the same, but the suite writes
- * constantly and the two do not always agree: an approve estimated at 39,699 runs
- * out at 39,699. That failure reverts with no data, which reads as a contract
- * refusing the call rather than as an estimate being short by a rounding of gas.
+ * transaction runs against the state it finds. The suite writes constantly, so a
+ * storage slot the estimate touched warm can be cold again by the time the
+ * transaction lands, and that difference is thousands of gas. Running out reverts
+ * with no data at all, which reads as the protocol refusing the call rather than
+ * as an estimate being short.
  *
- * Nobody here is paying for gas, so the headroom costs nothing and removes a
- * class of failure that looks like a bug in the protocol.
+ * Two paths need covering, because viem takes a different one per account kind.
+ * An account this suite holds the key for is estimated client side, and the
+ * estimate arrives as `eth_estimateGas`. An impersonated account is not: viem
+ * sends `eth_sendTransaction` with no limit at all and lets the node fill it, so
+ * no estimate is ever asked for and buffering one would miss exactly the setup
+ * steps that arrange every money path. Those are estimated here instead, before
+ * the send goes out.
+ *
+ * Nobody here is paying for gas, so the limit is doubled rather than nudged. A
+ * margin that has to be guessed right is a margin that will be guessed wrong.
  */
 const withGasHeadroom = (url: string): Transport => {
   const inner = http(url)
+  const headroom = (value: string) => `0x${(BigInt(value) * 2n).toString(16)}`
   return (config) => {
     const transport = inner(config)
     return {
       ...transport,
       async request(args: { method: string; params?: unknown }) {
-        const result = await transport.request(args as never)
-        const headroom = (value: string) => `0x${((BigInt(value) * 5n) / 4n).toString(16)}`
-        if (args.method === "eth_estimateGas") return headroom(result as string)
-        // viem fills a transaction through the node on some paths rather than
-        // asking for an estimate, and the limit arrives inside the filled object.
-        // Buffering only the estimate would leave exactly those calls short.
-        if (args.method === "eth_fillTransaction") {
-          const filled = result as { tx?: { gas?: string }; gas?: string } | null
-          if (filled?.tx?.gas) return { ...filled, tx: { ...filled.tx, gas: headroom(filled.tx.gas) } }
-          if (filled?.gas) return { ...filled, gas: headroom(filled.gas) }
+        if (args.method === "eth_sendTransaction") {
+          const [transaction] = (args.params ?? []) as [{ gas?: string }]
+          if (transaction && !transaction.gas) {
+            const estimate = await transport.request({ method: "eth_estimateGas", params: [transaction] } as never)
+            const params = [{ ...transaction, gas: headroom(estimate as string) }]
+            return transport.request({ method: "eth_sendTransaction", params } as never)
+          }
         }
+        const result = await transport.request(args as never)
+        if (args.method === "eth_estimateGas") return headroom(result as string)
         return result
       }
     } as ReturnType<Transport>
