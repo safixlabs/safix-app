@@ -13,12 +13,19 @@ import { expect, test } from "@playwright/test"
  * a number of that size sits in that place, which is the layout question. The
  * mask keeps the element's own box, so a figure that grows enough to reflow the
  * panel around it still shows up.
+ *
+ * Partnerships is not here, and cannot be. It is a list whose length is whatever
+ * the chain holds, and the suites that run before this one add to it, so the page
+ * is a different height from one run to the next. A mask cannot hide a card that
+ * makes the page taller, and a baseline redrawn to match becomes wrong as soon as
+ * anything creates another partnership. Its controls, its labels and its disabled
+ * reasons are covered by the interface and accessibility suites, which read the
+ * screen rather than photograph it.
  */
 const screens = [
   { path: "/", name: "dashboard" },
   { path: "/borrow/", name: "borrow" },
   { path: "/pool/", name: "pool" },
-  { path: "/partnerships/", name: "partnerships" },
   { path: "/assets/", name: "assets" },
   { path: "/passport/", name: "passport" },
   { path: "/risk/", name: "risk" },
