@@ -4,6 +4,7 @@
   "chainId": 31337,
   "port": 8545,
   "accounts": {
+    "comment": "anvil's first two accounts. These keys are printed by anvil on every start, are published in its documentation, and hold nothing on any network but a local one. They are here so the chain script and the suite read the same two addresses; they are not a credential and grant nothing.",
     "borrower": {
       "address": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
       "key": "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
