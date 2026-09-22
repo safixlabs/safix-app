@@ -1,4 +1,5 @@
 import {
+  type Transport,
   createPublicClient,
   createTestClient,
   createWalletClient,
@@ -72,8 +73,36 @@ export const tbill = deployment.tbill as Address
 export const bnvda = deployment.bnvda as Address
 export const tgold = deployment.tgold as Address
 
+/**
+ * The node's gas estimate, with room to be wrong.
+ *
+ * An estimate is made against the state at the time it is asked for, and the
+ * transaction runs against the state it finds. A storage slot that was cold when
+ * estimated and is still cold when executed costs the same, but the suite writes
+ * constantly and the two do not always agree: an approve estimated at 39,699 runs
+ * out at 39,699. That failure reverts with no data, which reads as a contract
+ * refusing the call rather than as an estimate being short by a rounding of gas.
+ *
+ * Nobody here is paying for gas, so the headroom costs nothing and removes a
+ * class of failure that looks like a bug in the protocol.
+ */
+const withGasHeadroom = (url: string): Transport => {
+  const inner = http(url)
+  return (config) => {
+    const transport = inner(config)
+    return {
+      ...transport,
+      async request(args: { method: string; params?: unknown }) {
+        const result = await transport.request(args as never)
+        if (args.method !== "eth_estimateGas") return result
+        return `0x${((BigInt(result as string) * 5n) / 4n).toString(16)}`
+      }
+    } as ReturnType<Transport>
+  }
+}
+
 export const walletFor = (key: Hex) =>
-  createWalletClient({ account: privateKeyToAccount(key), chain, transport: http(RPC_URL) })
+  createWalletClient({ account: privateKeyToAccount(key), chain, transport: withGasHeadroom(RPC_URL) })
 
 /**
  * Acts as an address the test does not hold the key for.
